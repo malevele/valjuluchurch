@@ -62,7 +62,7 @@
         <select id="unitSelect" class="form-select form-select-sm" style="width:auto; min-width:120px;"
                 onchange="navigateCashbook()">
           <option value="0" {% if not unit_id %}selected{% endif %}>全部單位</option>
-          {% for u in units %}
+          {% for u in cashbook_units %}
           <option value="{{ u.id }}" {% if u.id == unit_id %}selected{% endif %}>{{ u.name }}</option>
           {% endfor %}
         </select>

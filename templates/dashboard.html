@@ -4,14 +4,35 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
   <h4 class="mb-0"><i class="bi bi-table text-primary"></i> {{ year }}年 財務總表</h4>
-  <form method="get" class="d-flex align-items-center gap-2">
-    <label class="form-label mb-0 small text-muted">年度：</label>
-    <select name="year" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
-      {% for y in years %}
-      <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}年</option>
-      {% endfor %}
-    </select>
-  </form>
+  
+  {# ── 年度切換：箭頭 + 年份按鈕 ── #}
+  <div class="d-flex align-items-center gap-2">
+    {% if min_year < year %}
+    <a href="{{ url_for('dashboard', year=year-1) }}" class="btn btn-outline-secondary btn-sm" title="上一年">
+      <i class="bi bi-chevron-left"></i>
+    </a>
+    {% else %}
+    <button class="btn btn-outline-secondary btn-sm" disabled title="已是最早年份">
+      <i class="bi bi-chevron-left"></i>
+    </button>
+    {% endif %}
+    
+    {% for y in years %}
+    <a href="{{ url_for('dashboard', year=y) }}"
+       class="btn btn-sm {% if y == year %}btn-primary fw-bold{% else %}btn-outline-secondary{% endif %}"
+       style="min-width:60px;">{{ y }}</a>
+    {% endfor %}
+    
+    {% if year < max_year %}
+    <a href="{{ url_for('dashboard', year=year+1) }}" class="btn btn-outline-secondary btn-sm" title="下一年">
+      <i class="bi bi-chevron-right"></i>
+    </a>
+    {% else %}
+    <button class="btn btn-outline-secondary btn-sm" disabled title="已是最新年份">
+      <i class="bi bi-chevron-right"></i>
+    </button>
+    {% endif %}
+  </div>
 </div>
 
 <!-- 統計卡片 -->

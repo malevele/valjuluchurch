@@ -13,7 +13,14 @@
       </ol>
     </nav>
     <h4 class="mb-0">{{ unit.name }}</h4>
-    <div class="text-muted small">{{ year }} 年度</div>
+    <div class="d-flex gap-3 align-items-center">
+      <span class="text-muted small">{{ year }} 年度</span>
+      {% if last_update_date %}
+      <span class="text-muted small" style="border-left:1px solid #ccc; padding-left:10px;">
+        <i class="bi bi-clock-history"></i> 最後更新：{{ last_update_date.strftime('%Y-%m-%d %H:%M') }}
+      </span>
+      {% endif %}
+    </div>
   </div>
   {# 單位快速切換 #}
   <div class="no-print">

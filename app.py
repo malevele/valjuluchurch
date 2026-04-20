@@ -290,6 +290,7 @@ def unit_dashboard(unit_id):
     latest_tx = Transaction.query.filter_by(unit_id=unit_id)\
         .order_by(Transaction.date.desc(), Transaction.id.desc()).first()
     current_balance = latest_tx.balance if latest_tx else Decimal('0')
+    last_update_date = latest_tx.created_at if latest_tx else None
 
     # 年度累計收支
     yearly_stats = db.session.query(
@@ -326,10 +327,13 @@ def unit_dashboard(unit_id):
     bank_accounts = BankAccount.query.filter_by(unit_id=unit_id, is_active=True).all()
     bank_total = sum(b.current_balance for b in bank_accounts) or Decimal('0')
 
+    # 所有活躍單位列表（用於單位切換）
+    all_units = Unit.query.filter_by(is_active=True).order_by(Unit.sort_order, Unit.id).all()
+
     return render_template('unit_dashboard.html',
-        unit=unit, today=today, year=year, month=month,
+        unit=unit, all_units=all_units, today=today, year=year, month=month,
         monthly_income=monthly_income, monthly_expense=monthly_expense,
-        current_balance=current_balance,
+        current_balance=current_balance, last_update_date=last_update_date,
         yearly_income=yearly_income, yearly_expense=yearly_expense,
         recent_txs=recent_txs, top_income=top_income,
         recent_offerings=recent_offerings,
@@ -473,6 +477,8 @@ def dashboard():
     return render_template('dashboard.html',
         today=today, year=year, month=month,
         years=years,
+        min_year=min(years),
+        max_year=max(years),
         monthly_income=monthly_income,
         monthly_expense=monthly_expense,
         current_balance=current_balance,
