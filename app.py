@@ -1,4 +1,5 @@
 import os
+import re
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from datetime import date, datetime
 from decimal import Decimal
@@ -251,8 +252,18 @@ def next_voucher_no(vtype, year, unit_id=None):
     )
     if unit_id:
         q = q.filter(Transaction.unit_id == unit_id)
-    count = q.count()
-    return f'{prefix}{unit_code}-{year}-{count + 1:03d}'
+
+    # 依現有傳票號最後流水號續編，避免手動改號後下一筆回退
+    pattern = re.compile(rf'^{prefix}{re.escape(unit_code)}-{year}-(\d+)$')
+    max_seq = 0
+    for (vno,) in q.with_entities(Transaction.voucher_no).all():
+        if not vno:
+            continue
+        m = pattern.match(vno)
+        if m:
+            max_seq = max(max_seq, int(m.group(1)))
+
+    return f'{prefix}{unit_code}-{year}-{max_seq + 1:03d}'
 
 
 @app.route('/unit/<int:unit_id>')
@@ -757,7 +768,7 @@ def voucher_income():
             description = request.form['description'].strip()
             bank_account_id = request.form.get('bank_account_id') or None
             notes = request.form.get('notes', '').strip()
-            voucher_no = request.form.get('voucher_no') or next_voucher_no('income', tx_date.year, unit_id)
+            voucher_no = (request.form.get('voucher_no') or '').strip() or next_voucher_no('income', tx_date.year, unit_id)
 
             prev_bal = unit_prev_balance(unit_id, tx_date)
             balance  = prev_bal + amount_in
@@ -984,10 +995,26 @@ def offering_new():
     units = Unit.query.filter_by(is_active=True).order_by(Unit.sort_order, Unit.id).all()
     income_accounts = Account.query.filter_by(type='income').order_by(Account.sort_order).all()
     preset_unit = request.args.get('unit', 0, type=int)
-    suggested_no = next_voucher_no('income', date.today().year)
+    preset_voucher = request.args.get('voucher', '').strip()
+    preset_desc = request.args.get('desc', '').strip()
+    preset_amount = request.args.get('amount', '0').strip() or '0'
+    preset_date = request.args.get('date', date.today().strftime('%Y-%m-%d')).strip()
+    preset_account = request.args.get('account', '').strip()
+
+    try:
+        preset_year = datetime.strptime(preset_date, '%Y-%m-%d').year
+    except Exception:
+        preset_year = date.today().year
+
+    suggested_no = next_voucher_no('income', preset_year, preset_unit or None)
     return render_template('offering_new.html',
         units=units, income_accounts=income_accounts,
         suggested_no=suggested_no, preset_unit=preset_unit,
+        preset_voucher=preset_voucher,
+        preset_desc=preset_desc,
+        preset_amount=preset_amount,
+        preset_date=preset_date,
+        preset_account=preset_account,
         today=date.today().strftime('%Y-%m-%d'))
 
 
