@@ -4,35 +4,14 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
   <h4 class="mb-0"><i class="bi bi-table text-primary"></i> {{ year }}年 財務總表</h4>
-  
-  {# ── 年度切換：箭頭 + 年份按鈕 ── #}
-  <div class="d-flex align-items-center gap-2">
-    {% if min_year < year %}
-    <a href="{{ url_for('dashboard', year=year-1) }}" class="btn btn-outline-secondary btn-sm" title="上一年">
-      <i class="bi bi-chevron-left"></i>
-    </a>
-    {% else %}
-    <button class="btn btn-outline-secondary btn-sm" disabled title="已是最早年份">
-      <i class="bi bi-chevron-left"></i>
-    </button>
-    {% endif %}
-    
-    {% for y in years %}
-    <a href="{{ url_for('dashboard', year=y) }}"
-       class="btn btn-sm {% if y == year %}btn-primary fw-bold{% else %}btn-outline-secondary{% endif %}"
-       style="min-width:60px;">{{ y }}</a>
-    {% endfor %}
-    
-    {% if year < max_year %}
-    <a href="{{ url_for('dashboard', year=year+1) }}" class="btn btn-outline-secondary btn-sm" title="下一年">
-      <i class="bi bi-chevron-right"></i>
-    </a>
-    {% else %}
-    <button class="btn btn-outline-secondary btn-sm" disabled title="已是最新年份">
-      <i class="bi bi-chevron-right"></i>
-    </button>
-    {% endif %}
-  </div>
+  <form method="get" class="d-flex align-items-center gap-2">
+    <label class="form-label mb-0 small text-muted">年度：</label>
+    <select name="year" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+      {% for y in years %}
+      <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}年</option>
+      {% endfor %}
+    </select>
+  </form>
 </div>
 
 <!-- 統計卡片 -->
@@ -130,6 +109,7 @@
           <th>收支結餘</th>
           <th>現金簿餘額</th>
           <th>銀行餘額</th>
+          <th>庫存現金</th>
           <th style="width:60px;">核對</th>
         </tr>
       </thead>
@@ -157,6 +137,9 @@
           <td class="text-end text-info">
             {% if s.bank > 0 %}{{ '{:,.0f}'.format(s.bank) }}{% else %}<span class="text-muted">—</span>{% endif %}
           </td>
+          <td class="text-end">
+            {% if s.cash > 0 %}{{ '{:,.0f}'.format(s.cash) }}{% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
           {% set diff = s.balance - s.bank - s.cash %}
           <td class="text-center">
             {% if diff == 0 %}
@@ -173,7 +156,7 @@
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="7" class="text-center text-muted py-3">尚無單位資料</td></tr>
+        <tr><td colspan="8" class="text-center text-muted py-3">尚無單位資料</td></tr>
         {% endfor %}
       </tbody>
       {% if unit_summary %}
@@ -189,7 +172,7 @@
           <td class="text-end text-info">{{ '{:,.0f}'.format(bank_total) }}</td>
           <td class="text-end">{{ '{:,.0f}'.format(total_cash) }}</td>
           {% set total_diff = current_balance - bank_total - total_cash %}
-          <td class="text-center {% if total_diff == 0 %}text-success{% else %}text-danger{% endif %}">
+          <td class="text-center fw-semibold {% if total_diff == 0 %}text-success{% else %}text-danger{% endif %}">
             {% if total_diff == 0 %}<i class="bi bi-check-circle-fill"></i> 相符
             {% else %}<i class="bi bi-exclamation-triangle-fill"></i> 差 {{ '{:,.0f}'.format(total_diff) }}{% endif %}
           </td>

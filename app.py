@@ -959,9 +959,10 @@ def offering_new():
             if not voucher_no:
                 voucher_no = next_voucher_no('income', tx_date.year, unit_id_f)
 
-            # 建立收入傳票（若該傳票號尚未存在）
+            # 建立收入傳票（相同傳票號但不同科目視為不同筆）
             existing_tx = Transaction.query.filter_by(
-                voucher_no=voucher_no, voucher_type='income').first()
+                voucher_no=voucher_no, voucher_type='income',
+                account_id=account_id).first()
             if not existing_tx:
                 # 先取前一筆餘額，設定初始 balance
                 prev_bal = unit_prev_balance(unit_id_f, tx_date) if unit_id_f else Decimal('0')
