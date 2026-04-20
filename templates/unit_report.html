@@ -20,6 +20,9 @@
         {% endfor %}
       </select>
     </form>
+    <a href="{{ url_for('unit_annual_report', unit_id=unit.id, year=year) }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-file-earmark-text"></i> 年報表
+    </a>
     <a href="{{ url_for('unit_dashboard', unit_id=unit.id) }}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-house"></i> 儀表板
     </a>

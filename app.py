@@ -1208,6 +1208,60 @@ def unit_report(unit_id):
     )
 
 
+@app.route('/unit/<int:unit_id>/annual-report')
+def unit_annual_report(unit_id):
+    """單位專屬年報表"""
+    unit = Unit.query.get_or_404(unit_id)
+    year = request.args.get('year', date.today().year, type=int)
+    if year not in YEAR_RANGE:
+        year = date.today().year
+
+    income_accounts = Account.query.filter_by(type='income').order_by(Account.sort_order).all()
+    expense_accounts = Account.query.filter_by(type='expense').order_by(Account.sort_order).all()
+
+    def get_yearly(account_id, yr):
+        q = db.session.query(func.coalesce(func.sum(Transaction.amount_in - Transaction.amount_out), 0)).filter(
+            Transaction.account_id == account_id,
+            extract('year', Transaction.date) == yr,
+            Transaction.unit_id == unit_id
+        )
+        return q.scalar() or Decimal('0')
+
+    income_rows = []
+    expense_rows = []
+    for a in income_accounts:
+        yr_val = abs(get_yearly(a.id, year))
+        if yr_val:
+            income_rows.append({'account': a, 'yearly': yr_val})
+
+    for a in expense_accounts:
+        yr_val = abs(get_yearly(a.id, year))
+        if yr_val:
+            expense_rows.append({'account': a, 'yearly': yr_val})
+
+    total_income_yearly = sum(r['yearly'] for r in income_rows)
+    total_expense_yearly = sum(r['yearly'] for r in expense_rows)
+
+    prev_balance = tx_cumulative_balance(unit_id, year - 1, 12)
+    closing_balance = prev_balance + total_income_yearly - total_expense_yearly
+
+    bank_accounts_list = BankAccount.query.filter_by(unit_id=unit_id, is_active=True).all()
+    bank_total = sum(b.current_balance for b in bank_accounts_list) or Decimal('0')
+
+    return render_template('unit_annual_report.html',
+        unit=unit, year=year,
+        income_rows=income_rows, expense_rows=expense_rows,
+        total_income_yearly=total_income_yearly,
+        total_expense_yearly=total_expense_yearly,
+        net_yearly=total_income_yearly - total_expense_yearly,
+        prev_balance=prev_balance,
+        closing_balance=closing_balance,
+        bank_total=bank_total,
+        bank_accounts_list=bank_accounts_list,
+        years=YEAR_RANGE,
+    )
+
+
 @app.route('/reports/reconcile', methods=['POST'])
 def reports_reconcile():
     year    = int(request.form['year'])

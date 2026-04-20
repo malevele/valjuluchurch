@@ -14,6 +14,9 @@
     <a href="{{ url_for('reports', unit_id=unit.id, year=year, month=month) }}" class="btn btn-outline-info btn-sm">
       <i class="bi bi-bar-chart"></i> 月報表
     </a>
+    <a href="{{ url_for('unit_annual_report', unit_id=unit.id, year=year) }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-file-earmark-text"></i> 年報表
+    </a>
     <a href="{{ url_for('offering_list', unit_id=unit.id, year=year) }}" class="btn btn-outline-success btn-sm">
       <i class="bi bi-gift"></i> 奉獻記錄
     </a>
@@ -63,6 +66,15 @@
         <div class="small text-muted mb-1">{{ year }}年{{ month }}月</div>
         <div class="fw-semibold text-info mb-2"><i class="bi bi-file-earmark-bar-graph"></i> 單位月報表</div>
         <div class="text-muted small">只看此單位月報表資料</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-sm-6 col-xl-2">
+    <a href="{{ url_for('unit_annual_report', unit_id=unit.id, year=year) }}" class="card border-0 shadow-sm quick-link text-decoration-none h-100">
+      <div class="card-body">
+        <div class="small text-muted mb-1">{{ year }}年</div>
+        <div class="fw-semibold text-secondary mb-2"><i class="bi bi-file-earmark-text"></i> 單位年報表</div>
+        <div class="text-muted small">查看此單位全年收支與結餘</div>
       </div>
     </a>
   </div>
