@@ -4,61 +4,86 @@
 
 {% set cur_unit = units | selectattr('id','eq',unit_id) | list | first if unit_id else none %}
 
-<div class="d-flex justify-content-between align-items-center mb-2">
-  <h4 class="mb-0">
-    <i class="bi bi-journal-text text-primary"></i>
-    {% if cur_unit %}{{ cur_unit.name }}{% else %}全部單位{% endif %} 現金簿
-  </h4>
-  <div class="d-flex gap-2 align-items-center">
-    <form class="d-flex gap-2 align-items-center" method="get" id="cbFilterForm">
-      <input type="hidden" name="unit_id" value="{{ unit_id }}">
-      <div class="input-group input-group-sm" style="width:130px">
-        <select name="year" id="yearSelect" class="form-select form-select-sm"
-                onchange="handleYearChange(this)">
+<div class="mb-3">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h4 class="mb-0">
+      <i class="bi bi-journal-text text-primary"></i>
+      {% if cur_unit %}{{ cur_unit.name }}{% else %}全部單位{% endif %} 現金簿
+    </h4>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('voucher_income', unit_id=unit_id if unit_id else 0) }}"
+         class="btn btn-success btn-sm">
+        <i class="bi bi-arrow-up-circle"></i> 新增收入傳票
+      </a>
+      <a href="{{ url_for('voucher_expense', unit_id=unit_id if unit_id else 0) }}"
+         class="btn btn-danger btn-sm">
+        <i class="bi bi-arrow-down-circle"></i> 新增支出傳票
+      </a>
+      {% if unit_id %}
+      <a href="{{ url_for('offering_new') }}?unit={{ unit_id }}"
+         class="btn btn-warning btn-sm">
+        <i class="bi bi-cash-stack"></i> 新增點算表
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── 篩選條件：橫排並排，自動跳頁 ── #}
+  <div class="card border-0 bg-light p-3 mb-3">
+    <div class="d-flex flex-wrap gap-3 align-items-center">
+      {# 年份選擇 #}
+      <div class="d-flex align-items-center gap-2">
+        <label class="text-muted small mb-0" style="white-space:nowrap;">年份：</label>
+        <select id="yearSelect" class="form-select form-select-sm" style="width:auto; min-width:100px;"
+                onchange="navigateCashbook()">
           {% for y in years %}
           <option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}年</option>
           {% endfor %}
           {% if year not in years %}
           <option value="{{ year }}" selected>{{ year }}年</option>
           {% endif %}
-          <option value="__custom__">手動輸入…</option>
         </select>
       </div>
-      <input type="number" name="_year_custom" id="yearCustom" class="form-control form-control-sm d-none"
-             min="2000" max="2099" value="{{ year }}" placeholder="年份"
-             style="width:80px" onblur="applyCustomYear()">
-      <select name="month" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
-        {% for m in months %}<option value="{{ m }}" {% if m==month %}selected{% endif %}>{{ m }}月</option>{% endfor %}
-      </select>
-    </form>
-    <a href="{{ url_for('voucher_income', unit_id=unit_id if unit_id else 0) }}"
-       class="btn btn-success btn-sm">
-      <i class="bi bi-arrow-up-circle"></i> 新增收入傳票
-    </a>
-    <a href="{{ url_for('voucher_expense', unit_id=unit_id if unit_id else 0) }}"
-       class="btn btn-danger btn-sm">
-      <i class="bi bi-arrow-down-circle"></i> 新增支出傳票
-    </a>
-    {% if unit_id %}
-    <a href="{{ url_for('offering_new') }}?unit={{ unit_id }}"
-       class="btn btn-warning btn-sm">
-      <i class="bi bi-cash-stack"></i> 新增點算表
-    </a>
-    {% endif %}
+
+      {# 月份選擇 #}
+      <div class="d-flex align-items-center gap-2">
+        <label class="text-muted small mb-0" style="white-space:nowrap;">月份：</label>
+        <select id="monthSelect" class="form-select form-select-sm" style="width:auto; min-width:80px;"
+                onchange="navigateCashbook()">
+          {% for m in months %}
+          <option value="{{ m }}" {% if m==month %}selected{% endif %}>{{ m }}月</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# 單位選擇 #}
+      <div class="d-flex align-items-center gap-2">
+        <label class="text-muted small mb-0" style="white-space:nowrap;">單位：</label>
+        <select id="unitSelect" class="form-select form-select-sm" style="width:auto; min-width:120px;"
+                onchange="navigateCashbook()">
+          <option value="0" {% if not unit_id %}selected{% endif %}>全部單位</option>
+          {% for u in units %}
+          <option value="{{ u.id }}" {% if u.id == unit_id %}selected{% endif %}>{{ u.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- 單位標籤列 -->
-<div class="mb-3 border-bottom pb-2">
-  <div class="d-flex gap-1 flex-wrap">
-    {% for u in units %}
-    <a href="{{ url_for('cashbook', year=year, month=month, unit_id=u.id) }}"
-       class="btn btn-sm {% if unit_id == u.id %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-      {{ u.name }}
-    </a>
-    {% endfor %}
-  </div>
-</div>
+<script>
+function navigateCashbook() {
+  const year = document.getElementById('yearSelect').value;
+  const month = document.getElementById('monthSelect').value;
+  const unitId = document.getElementById('unitSelect').value;
+  
+  let url = "{{ url_for('cashbook') }}?year=" + year + "&month=" + month;
+  if (unitId && unitId !== '0') {
+    url += "&unit_id=" + unitId;
+  }
+  window.location.href = url;
+}
+</script>
 
 <!-- 月計摘要 -->
 <div class="row g-2 mb-3 no-print">

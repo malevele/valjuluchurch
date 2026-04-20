@@ -109,8 +109,7 @@
           <th>收支結餘</th>
           <th>現金簿餘額</th>
           <th>銀行餘額</th>
-          <th>手上現金</th>
-          <th>相符核對</th>
+          <th style="width:60px;">核對</th>
         </tr>
       </thead>
       <tbody>
@@ -137,17 +136,18 @@
           <td class="text-end text-info">
             {% if s.bank > 0 %}{{ '{:,.0f}'.format(s.bank) }}{% else %}<span class="text-muted">—</span>{% endif %}
           </td>
-          <td class="text-end">
-            {% if s.cash > 0 %}{{ '{:,.0f}'.format(s.cash) }}{% else %}<span class="text-muted">—</span>{% endif %}
-          </td>
           {% set diff = s.balance - s.bank - s.cash %}
-          <td class="text-center fw-semibold
-            {% if diff == 0 %}text-success{% else %}text-danger{% endif %}">
+          <td class="text-center">
             {% if diff == 0 %}
-              <i class="bi bi-check-circle-fill"></i> 相符
+              <span class="badge rounded-circle bg-success" 
+                    title="帳面餘額相符" data-bs-toggle="tooltip" style="width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center;">
+                <i class="bi bi-check" style="font-size:0.9rem;"></i>
+              </span>
             {% else %}
-              <i class="bi bi-exclamation-triangle-fill"></i>
-              差 {{ '{:,.0f}'.format(diff) }}
+              <span class="badge rounded-circle bg-danger" 
+                    title="差異：{{ '{:,.0f}'.format(diff) }}" data-bs-toggle="tooltip" style="width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center;">
+                <i class="bi bi-x" style="font-size:0.9rem;"></i>
+              </span>
             {% endif %}
           </td>
         </tr>
@@ -203,4 +203,13 @@
   .print-only { display: none; }
 }
 </style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // 初始化 Bootstrap tooltips
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+});
+</script>
 {% endblock %}

@@ -34,10 +34,26 @@
           </a>
           <ul class="dropdown-menu">
             <li><h6 class="dropdown-header">選擇單位</h6></li>
-            {% for u in cashbook_units %}
-            <li><a class="dropdown-item" href="{{ url_for('unit_dashboard', unit_id=u.id) }}">
-              <i class="bi bi-house"></i> {{ u.name }}</a></li>
-            {% endfor %}
+            {% set units_by_type = cashbook_units | groupby('type') | list %}
+            {% if units_by_type | length > 1 %}
+              {# 若有分類，則按類別顯示 #}
+              {% for type_name, units_in_type in units_by_type %}
+              {% if type_name %}
+              <li><h6 class="dropdown-header small text-muted">{{ type_name }}</h6></li>
+              {% endif %}
+              {% for u in units_in_type %}
+              <li><a class="dropdown-item" href="{{ url_for('unit_dashboard', unit_id=u.id) }}">
+                {{ u.name }}</a></li>
+              {% endfor %}
+              {% if not loop.last %}<li><hr class="dropdown-divider"></li>{% endif %}
+              {% endfor %}
+            {% else %}
+              {# 若無分類，則直接列出 #}
+              {% for u in cashbook_units %}
+              <li><a class="dropdown-item" href="{{ url_for('unit_dashboard', unit_id=u.id) }}">
+                <i class="bi bi-house"></i> {{ u.name }}</a></li>
+              {% endfor %}
+            {% endif %}
           </ul>
         </li>
         <li class="nav-item dropdown">
@@ -108,6 +124,34 @@
 
 <!-- 主要內容 -->
 <main class="container-fluid py-3 px-4">
+  {# ── 統一的麵包屑導航區塊 ── #}
+  <nav aria-label="breadcrumb" class="no-print mb-3" id="breadcrumb-nav">
+    <ol class="breadcrumb mb-0" style="font-size:0.9rem;">
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">首頁</a></li>
+      {% if request.endpoint == 'dashboard' %}
+        <li class="breadcrumb-item active">財務總表</li>
+      {% elif request.endpoint == 'cashbook' %}
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">財務總表</a></li>
+        <li class="breadcrumb-item active">現金簿</li>
+      {% elif request.endpoint == 'unit_dashboard' %}
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">財務總表</a></li>
+        <li class="breadcrumb-item active">單位作業中心</li>
+      {% elif 'member' in (request.endpoint or '') %}
+        <li class="breadcrumb-item active">會友管理</li>
+      {% elif 'offering' in (request.endpoint or '') %}
+        <li class="breadcrumb-item active">奉獻管理</li>
+      {% elif 'accounting_check' in (request.endpoint or '') %}
+        <li class="breadcrumb-item active">查帳管理</li>
+      {% elif 'settings' in (request.endpoint or '') %}
+        <li class="breadcrumb-item active">系統設定</li>
+      {% elif 'reports' in (request.endpoint or '') %}
+        <li class="breadcrumb-item active">報表</li>
+      {% else %}
+        <li class="breadcrumb-item active">{{ request.endpoint | replace('_', ' ') | title }}</li>
+      {% endif %}
+    </ol>
+  </nav>
+
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for category, message in messages %}
