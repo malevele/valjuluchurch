@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}新增出納交接{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-arrow-left-right"></i> 出納交接確認表</h5>
+        <small class="text-muted">台灣基督長老教會瓦酪露教會</small>
+      </div>
+      <form method="post">
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">交接日期 *</label>
+              <input type="date" name="handover_date" class="form-control" value="{{ today }}" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">現金金額</label>
+              <div class="input-group">
+                <span class="input-group-text">NT$</span>
+                <input type="number" name="cash_amount" id="cash_amount" class="form-control"
+                       min="0" step="1" value="0" oninput="updateTotal()">
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">存款金額</label>
+              <div class="input-group">
+                <span class="input-group-text">NT$</span>
+                <input type="number" name="bank_amount" id="bank_amount" class="form-control"
+                       min="0" step="1" value="0" oninput="updateTotal()">
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="alert alert-info py-2">
+                <span class="fw-bold">合計金額：</span>
+                <span id="total_display" class="text-primary fw-bold fs-5">NT$ 0</span>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">存款明細（帳號等）</label>
+              <textarea name="bank_details" class="form-control" rows="3"
+                placeholder="例：第一銀行 帳號 xxx，餘額 xxx&#10;郵局 帳號 xxx，餘額 xxx"></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">原任出納</label>
+              <input type="text" name="old_cashier" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">新任出納</label>
+              <input type="text" name="new_cashier" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">會計</label>
+              <input type="text" name="accountant" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">顧問/監督</label>
+              <input type="text" name="advisor" class="form-control">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">查帳結果</label>
+              <input type="text" name="audit_result" class="form-control"
+                     placeholder="例：帳目相符，無異常">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">備註</label>
+              <textarea name="notes" class="form-control" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between">
+          <a href="{{ url_for('handover_list') }}" class="btn btn-secondary">取消</a>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save"></i> 儲存交接記錄
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function updateTotal() {
+  const cash = parseFloat(document.getElementById('cash_amount').value) || 0;
+  const bank = parseFloat(document.getElementById('bank_amount').value) || 0;
+  document.getElementById('total_display').textContent = 'NT$ ' + (cash + bank).toLocaleString();
+}
+</script>
+{% endblock %}

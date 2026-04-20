@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% block title %}{{ year }}年 財務總表{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
+  <h4 class="mb-0"><i class="bi bi-table text-primary"></i> {{ year }}年 財務總表</h4>
+  <form method="get" class="d-flex align-items-center gap-2">
+    <label class="form-label mb-0 small text-muted">年度：</label>
+    <select name="year" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+      {% for y in years %}
+      <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}年</option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+<!-- 統計卡片 -->
+<div class="row g-3 mb-4 no-print">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm stat-card income">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="stat-label">{{ year }}年 總收入</div>
+            <div class="stat-value text-success">NT$ {{ '{:,.0f}'.format(yearly_income) }}</div>
+            <div class="text-muted small mt-1">本月：NT$ {{ '{:,.0f}'.format(monthly_income) }}</div>
+          </div>
+          <div class="stat-icon bg-success-subtle text-success">
+            <i class="bi bi-arrow-up-circle-fill fs-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm stat-card expense">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="stat-label">{{ year }}年 總支出</div>
+            <div class="stat-value text-danger">NT$ {{ '{:,.0f}'.format(yearly_expense) }}</div>
+            <div class="text-muted small mt-1">本月：NT$ {{ '{:,.0f}'.format(monthly_expense) }}</div>
+          </div>
+          <div class="stat-icon bg-danger-subtle text-danger">
+            <i class="bi bi-arrow-down-circle-fill fs-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm stat-card balance">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="stat-label">現金簿帳面餘額</div>
+            <div class="stat-value {% if current_balance >= 0 %}text-primary{% else %}text-danger{% endif %}">
+              NT$ {{ '{:,.0f}'.format(current_balance) }}
+            </div>
+          </div>
+          <div class="stat-icon bg-primary-subtle text-primary">
+            <i class="bi bi-wallet2 fs-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm stat-card bank">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="stat-label">銀行存款合計</div>
+            <div class="stat-value text-info">NT$ {{ '{:,.0f}'.format(bank_total) }}</div>
+          </div>
+          <div class="stat-icon bg-info-subtle text-info">
+            <i class="bi bi-bank fs-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 各單位收支概況 -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent d-flex justify-content-between align-items-center no-print">
+    <h6 class="mb-0"><i class="bi bi-bar-chart-steps text-primary"></i> {{ year }}年 各單位收支概況</h6>
+    <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-printer"></i> 列印
+    </button>
+  </div>
+
+  <!-- 列印標題（只在列印時顯示） -->
+  <div class="print-only text-center py-3">
+    <h5 class="mb-1">台灣基督長老教會瓦酪露教會</h5>
+    <div class="fw-semibold fs-5">{{ year }}年度 財務總表</div>
+    <div class="text-muted small">各單位收支概況</div>
+    <div class="text-muted small">列印日期：{{ today.strftime('%Y/%m/%d') }}</div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-bordered align-middle mb-0">
+      <thead class="table-light">
+        <tr class="text-center small fw-semibold">
+          <th class="text-start ps-3">單位</th>
+          <th>年度收入</th>
+          <th>年度支出</th>
+          <th>收支結餘</th>
+          <th>現金簿餘額</th>
+          <th>銀行餘額</th>
+          <th>手上現金</th>
+          <th>相符核對</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in unit_summary %}
+        {% set net = s.income - s.expense %}
+        <tr class="small">
+          <td class="ps-3 fw-semibold">
+            <a href="{{ url_for('cashbook', unit_id=s.unit.id) }}"
+               class="text-decoration-none text-dark no-print">{{ s.unit.name }}</a>
+            <span class="print-only">{{ s.unit.name }}</span>
+          </td>
+          <td class="text-end text-success">
+            {% if s.income > 0 %}{{ '{:,.0f}'.format(s.income) }}{% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td class="text-end text-danger">
+            {% if s.expense > 0 %}{{ '{:,.0f}'.format(s.expense) }}{% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td class="text-end fw-semibold {% if net >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {{ '{:,.0f}'.format(net) }}
+          </td>
+          <td class="text-end text-primary fw-semibold">
+            {{ '{:,.0f}'.format(s.balance) }}
+          </td>
+          <td class="text-end text-info">
+            {% if s.bank > 0 %}{{ '{:,.0f}'.format(s.bank) }}{% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td class="text-end">
+            {% if s.cash > 0 %}{{ '{:,.0f}'.format(s.cash) }}{% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          {% set diff = s.balance - s.bank - s.cash %}
+          <td class="text-center fw-semibold
+            {% if diff == 0 %}text-success{% else %}text-danger{% endif %}">
+            {% if diff == 0 %}
+              <i class="bi bi-check-circle-fill"></i> 相符
+            {% else %}
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              差 {{ '{:,.0f}'.format(diff) }}
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-3">尚無單位資料</td></tr>
+        {% endfor %}
+      </tbody>
+      {% if unit_summary %}
+      <tfoot class="table-secondary fw-bold small">
+        <tr>
+          <td class="ps-3">合計</td>
+          <td class="text-end text-success">{{ '{:,.0f}'.format(yearly_income) }}</td>
+          <td class="text-end text-danger">{{ '{:,.0f}'.format(yearly_expense) }}</td>
+          <td class="text-end {% if yearly_income - yearly_expense >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {{ '{:,.0f}'.format(yearly_income - yearly_expense) }}
+          </td>
+          <td class="text-end text-primary">{{ '{:,.0f}'.format(current_balance) }}</td>
+          <td class="text-end text-info">{{ '{:,.0f}'.format(bank_total) }}</td>
+          <td class="text-end">{{ '{:,.0f}'.format(total_cash) }}</td>
+          {% set total_diff = current_balance - bank_total - total_cash %}
+          <td class="text-center {% if total_diff == 0 %}text-success{% else %}text-danger{% endif %}">
+            {% if total_diff == 0 %}<i class="bi bi-check-circle-fill"></i> 相符
+            {% else %}<i class="bi bi-exclamation-triangle-fill"></i> 差 {{ '{:,.0f}'.format(total_diff) }}{% endif %}
+          </td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+
+  <!-- 列印簽核欄（只在列印時顯示） -->
+  <div class="print-only p-4 border-top mt-2">
+    <div class="row text-center">
+      <div class="col-4">製表人：________________</div>
+      <div class="col-4">覆核人：________________</div>
+      <div class="col-4">財務負責人：________________</div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  nav, footer, .navbar { display: none !important; }
+  body { background: white !important; }
+  .card { border: 1px solid #ccc !important; box-shadow: none !important; }
+}
+@media screen {
+  .print-only { display: none; }
+}
+</style>
+{% endblock %}

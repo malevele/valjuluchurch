@@ -1,0 +1,323 @@
+{% extends 'base.html' %}
+{% block title %}收入傳票{% endblock %}
+{% block content %}
+
+<!-- 列印用傳票版面（螢幕隱藏，列印時顯示） -->
+<div id="print-voucher-area" style="display:none">
+  <div style="padding:30px; font-family:'Microsoft JhengHei',sans-serif;">
+    <h2 style="text-align:center;font-size:14pt;margin:0 0 4px;">台灣基督長老教會瓦酪露教會</h2>
+    <h1 style="text-align:center;font-size:20pt;letter-spacing:6px;margin:0 0 18px;">收　入　傳　票</h1>
+    <table style="width:100%;border-collapse:collapse;font-size:12pt;">
+      <tr>
+        <td style="border:1px solid #000;padding:8px 12px;width:80px;background:#f5f5f5;font-weight:bold;">日　期</td>
+        <td style="border:1px solid #000;padding:8px 12px;" id="pv-date"></td>
+        <td style="border:1px solid #000;padding:8px 12px;width:80px;background:#f5f5f5;font-weight:bold;">傳票號</td>
+        <td style="border:1px solid #000;padding:8px 12px;font-weight:bold;" id="pv-voucher"></td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000;padding:8px 12px;background:#f5f5f5;font-weight:bold;">單　位</td>
+        <td style="border:1px solid #000;padding:8px 12px;" id="pv-unit"></td>
+        <td style="border:1px solid #000;padding:8px 12px;background:#f5f5f5;font-weight:bold;">科　目</td>
+        <td style="border:1px solid #000;padding:8px 12px;" id="pv-account"></td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000;padding:8px 12px;background:#f5f5f5;font-weight:bold;">摘　要</td>
+        <td colspan="3" style="border:1px solid #000;padding:8px 12px;" id="pv-desc"></td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000;padding:8px 12px;background:#f5f5f5;font-weight:bold;">金　額</td>
+        <td colspan="3" style="border:1px solid #000;padding:8px 12px;font-size:14pt;font-weight:bold;color:#1a7c3e;" id="pv-amount"></td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000;padding:8px 12px;background:#f5f5f5;font-weight:bold;">備　註</td>
+        <td colspan="3" style="border:1px solid #000;padding:8px 12px;" id="pv-notes"></td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000;padding:55px 6px 8px;text-align:center;">製票者</td>
+        <td style="border:1px solid #000;padding:55px 6px 8px;text-align:center;">審核者</td>
+        <td style="border:1px solid #000;padding:55px 6px 8px;text-align:center;">主　任</td>
+        <td style="border:1px solid #000;padding:55px 6px 8px;text-align:center;">收款人</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<style>
+@media print {
+  body > *:not(#print-voucher-area) { display: none !important; }
+  #print-voucher-area { display: block !important; }
+}
+</style>
+
+<div class="d-flex align-items-center mb-3 gap-2">
+  <a href="{{ url_for('cashbook', unit_id=preset_unit) if preset_unit else url_for('cashbook') }}"
+     class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="mb-0 text-success">
+    <i class="bi bi-arrow-up-circle-fill"></i> 新增收入傳票
+  </h4>
+</div>
+
+{% if saved %}
+<!-- 儲存成功後的奉獻點算表詢問 -->
+<div class="card border-success shadow-sm mb-4">
+  <div class="card-header bg-success text-white">
+    <i class="bi bi-check-circle-fill"></i>
+    收入傳票 <strong>{{ last_voucher }}</strong> 已成功儲存並加入現金簿
+  </div>
+  <div class="card-body">
+    <p class="mb-3 fw-semibold">
+      <i class="bi bi-question-circle text-warning"></i>
+      是否同時新增對應的<strong>奉獻點算表</strong>？
+    </p>
+    <p class="text-muted small mb-3">
+      點算表將自動帶入：摘要「{{ last_desc }}」、金額 NT$ {{ '{:,.0f}'.format(last_amount | float) }}
+    </p>
+    <div class="d-flex gap-3 flex-wrap">
+      <a href="{{ url_for('offering_new', unit=last_unit, voucher=last_voucher, desc=last_desc or '', amount=last_amount or 0, date=last_date or '', account=last_account or '') }}"
+         class="btn btn-success">
+        <i class="bi bi-cash-stack"></i> 是，新增奉獻點算表
+      </a>
+      {% if continue_after %}
+      <a href="{{ url_for('voucher_income', unit_id=last_unit) }}"
+         class="btn btn-outline-success">
+        <i class="bi bi-plus-circle"></i> 否，繼續新增收入傳票
+      </a>
+      {% else %}
+      <a href="{{ url_for('cashbook', year=last_year, month=last_month, unit_id=last_unit) }}"
+         class="btn btn-outline-secondary">
+        <i class="bi bi-journal-text"></i> 否，直接返回現金簿
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+    <div>
+      <strong>台灣基督長老教會瓦酪露教會</strong>
+      <span class="ms-3">收入傳票</span>
+    </div>
+    <span class="badge bg-warning text-dark fs-6" id="display_voucher_no">{{ suggested_no }}</span>
+  </div>
+
+  <form method="post">
+    <div class="card-body">
+
+      <!-- 第一列：與現金簿欄位相同順序 日期 | 傳票號 | 單位 -->
+      <div class="row g-3 mb-3">
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">日期 <span class="text-danger">*</span></label>
+          <input type="date" name="date" class="form-control" value="{{ today }}" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">傳票號 <span class="text-danger">*</span></label>
+          <input type="text" name="voucher_no" id="voucher_no_input"
+                 class="form-control font-monospace"
+                 value="{{ suggested_no }}" required
+                 oninput="document.getElementById('display_voucher_no').textContent=this.value">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">單位 <span class="text-danger">*</span></label>
+          <select name="unit_id" id="unit_select" class="form-select" required onchange="updateBalance()">
+            <option value="">— 請選擇單位 —</option>
+            {% for u in units %}
+            <option value="{{ u.id }}"
+                    data-balance="{{ unit_balances.get(u.id, 0) }}"
+                    {% if u.id == preset_unit %}selected{% endif %}>
+              {{ u.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- 第二列：會計科目 | 摘要 -->
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">收入科目 <span class="text-danger">*</span></label>
+          <select name="account_id" class="form-select" required>
+            <option value="">— 請選擇科目 —</option>
+            {% for a in accounts %}
+            <option value="{{ a.id }}">{{ a.code }} {{ a.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">摘要 <span class="text-danger">*</span></label>
+          <input type="text" name="description" class="form-control"
+                 placeholder="例：4月份主日禮拜奉獻" required>
+        </div>
+      </div>
+
+      <!-- 第三列：收入金額 -->
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">收入金額 <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <span class="input-group-text bg-success text-white">
+              <i class="bi bi-arrow-up"></i> NT$
+            </span>
+            <input type="number" name="amount" id="amount_input"
+                   class="form-control form-control-lg text-success fw-bold"
+                   min="1" step="1" placeholder="0" required
+                   oninput="updateBalance()">
+          </div>
+        </div>
+      </div>
+
+      <!-- 第四列：銀行帳戶 | 備註 -->
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label">銀行帳戶 <span class="text-muted small">（選填）</span></label>
+          <select name="bank_account_id" id="bank_select" class="form-select">
+            <option value="">— 現金 —</option>
+            {% for ba in bank_accounts %}
+            <option value="{{ ba.id }}" data-unit="{{ ba.unit_id or '' }}">
+              {{ ba.bank_name }} {{ ba.account_no[-4:] }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">備註 <span class="text-muted small">（選填）</span></label>
+          <input type="text" name="notes" class="form-control" placeholder="其他說明">
+        </div>
+      </div>
+
+      <!-- 現金簿預覽 -->
+      <div class="card bg-light border-0 mt-2">
+        <div class="card-header bg-success-subtle py-1">
+          <small class="fw-semibold text-success"><i class="bi bi-journal-text"></i> 現金簿預覽（儲存後新增至此單位）</small>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 align-middle">
+            <thead class="table-light">
+              <tr class="small text-center">
+                <th>日期</th><th>傳票號</th><th>科目</th><th>摘要</th><th>單位</th>
+                <th class="text-end">收入</th><th class="text-end">支出</th><th class="text-end">餘額</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="small text-center">
+                <td id="prev_date">—</td>
+                <td><span class="badge bg-success-subtle text-success-emphasis" id="prev_voucher">—</span></td>
+                <td>—</td>
+                <td>—</td>
+                <td id="prev_unit">—</td>
+                <td class="text-end text-muted" id="prev_balance_cell">—</td>
+                <td class="text-end">—</td>
+                <td class="text-end fw-bold text-muted" id="prev_balance_show">—</td>
+              </tr>
+              <tr class="table-success-subtle small text-center fw-semibold">
+                <td id="new_date">今日</td>
+                <td><span class="badge bg-success" id="new_voucher">{{ suggested_no }}</span></td>
+                <td>—</td>
+                <td>—</td>
+                <td id="new_unit">（請選擇）</td>
+                <td class="text-end text-success" id="new_amount">0</td>
+                <td class="text-end">—</td>
+                <td class="text-end text-success" id="new_balance">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card-footer d-flex justify-content-between align-items-center">
+      <a href="{{ url_for('cashbook', unit_id=preset_unit) if preset_unit else url_for('cashbook') }}"
+         class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> 返回
+      </a>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary" onclick="printVoucher()">
+          <i class="bi bi-printer"></i> 列印傳票
+        </button>
+        <button type="submit" name="_continue" value="1" class="btn btn-outline-success">
+          <i class="bi bi-plus-circle"></i> 儲存並繼續新增
+        </button>
+        <button type="submit" class="btn btn-success">
+          <i class="bi bi-save"></i> 儲存並回現金簿
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function printVoucher() {
+  const dateVal  = document.querySelector('input[name="date"]').value;
+  const voucher  = document.getElementById('voucher_no_input').value;
+  const unitSel  = document.getElementById('unit_select');
+  const unitName = unitSel.options[unitSel.selectedIndex]?.text || '（未選擇）';
+  const accSel   = document.querySelector('select[name="account_id"]');
+  const accName  = accSel.options[accSel.selectedIndex]?.text || '（未選擇）';
+  const desc     = document.querySelector('input[name="description"]').value;
+  const amount   = parseFloat(document.querySelector('input[name="amount"]').value) || 0;
+  const notes    = document.querySelector('input[name="notes"]')?.value || '';
+
+  document.getElementById('pv-date').textContent    = dateVal;
+  document.getElementById('pv-voucher').textContent = voucher;
+  document.getElementById('pv-unit').textContent    = unitName;
+  document.getElementById('pv-account').textContent = accName;
+  document.getElementById('pv-desc').textContent    = desc;
+  document.getElementById('pv-amount').textContent  = 'NT$ ' + amount.toLocaleString('zh-TW');
+  document.getElementById('pv-notes').textContent   = notes;
+
+  window.print();
+}
+
+const unitBalances  = {{ unit_balances | tojson }};
+const unitSuggested = {{ unit_suggested | tojson }};
+
+function updateBalance() {
+  const sel = document.getElementById('unit_select');
+  const uid = sel.value;
+  const unitName = sel.options[sel.selectedIndex]?.text || '（請選擇）';
+  const prevBal = uid ? (unitBalances[uid] || 0) : 0;
+  const amount  = parseFloat(document.getElementById('amount_input').value) || 0;
+  const newBal  = prevBal + amount;
+
+  // 切換單位時自動填入該單位建議傳票號
+  if (uid && unitSuggested[uid]) {
+    document.getElementById('voucher_no_input').value = unitSuggested[uid];
+    document.getElementById('display_voucher_no').textContent = unitSuggested[uid];
+  }
+  const voucher = document.getElementById('voucher_no_input').value;
+
+  document.getElementById('new_unit').textContent    = unitName;
+  document.getElementById('new_amount').textContent  = amount > 0 ? amount.toLocaleString() : '0';
+  document.getElementById('new_balance').textContent = newBal.toLocaleString();
+  document.getElementById('new_voucher').textContent = voucher;
+
+  if (uid && prevBal !== null) {
+    document.getElementById('prev_balance_cell').textContent = '';
+    document.getElementById('prev_balance_show').textContent = prevBal.toLocaleString();
+    document.getElementById('prev_unit').textContent = unitName;
+  }
+
+  // 篩選銀行帳戶：只顯示該單位的帳戶，「現金」永遠顯示
+  const bankSel = document.getElementById('bank_select');
+  const curBank = bankSel.value;
+  Array.from(bankSel.options).forEach(opt => {
+    if (opt.value === '') { opt.style.display = ''; return; }
+    opt.style.display = (!uid || opt.dataset.unit === uid) ? '' : 'none';
+  });
+  // 若目前選取的銀行帳戶不屬於新選的單位，重置為現金
+  const selectedOpt = bankSel.options[bankSel.selectedIndex];
+  if (selectedOpt && selectedOpt.value !== '' && selectedOpt.dataset.unit !== uid) {
+    bankSel.value = '';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', updateBalance);
+</script>
+{% endblock %}

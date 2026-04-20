@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% block title %}會計檢帳表 {{ chk.year }}年{{ chk.month }}月{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
+  <div class="d-flex align-items-center gap-2">
+    <a href="{{ url_for('accounting_check_list') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h5 class="mb-0">
+      <i class="bi bi-clipboard2-check text-primary"></i>
+      會計檢帳表 — {{ chk.year }}年{{ chk.month }}月
+      {% if chk.unit %}（{{ chk.unit.name }}）{% endif %}
+    </h5>
+  </div>
+  <div class="d-flex gap-2">
+    <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-printer"></i> 列印
+    </button>
+    <form method="post" action="{{ url_for('accounting_check_delete', chk_id=chk.id) }}"
+          onsubmit="return confirm('確定刪除此檢帳表？')">
+      <button type="submit" class="btn btn-sm btn-outline-danger">
+        <i class="bi bi-trash"></i> 刪除
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card border-0 shadow-sm">
+
+      <!-- 列印標題 -->
+      <div class="card-header bg-primary text-white text-center py-3">
+        <h5 class="mb-1">台灣基督長老教會瓦酪露教會</h5>
+        <div class="fw-semibold fs-6">會計檢帳表</div>
+        <small class="text-white-50">統一編號 87878809</small>
+      </div>
+
+      <div class="card-body">
+        <!-- 基本資訊 -->
+        <div class="row small mb-3 pb-2 border-bottom">
+          <div class="col-6 col-md-2"><span class="text-muted">查帳期間：</span>
+            <strong>{{ chk.year }}年
+            {% if chk.quarter == 1 %}第一季（1–3月）
+            {% elif chk.quarter == 2 %}第二季（4–6月）
+            {% elif chk.quarter == 3 %}第三季（7–9月）
+            {% elif chk.quarter == 4 %}第四季（10–12月）
+            {% else %}全年度{% endif %}</strong></div>
+          <div class="col-6 col-md-2">
+            <span class="badge
+              {% if chk.audit_type == '年度總查' %}bg-primary
+              {% elif '第一季' in (chk.audit_type or '') %}bg-success
+              {% elif '第二季' in (chk.audit_type or '') %}bg-info text-dark
+              {% elif '第三季' in (chk.audit_type or '') %}bg-warning text-dark
+              {% elif '第四季' in (chk.audit_type or '') %}bg-danger
+              {% else %}bg-secondary{% endif %}">
+              {{ chk.audit_type or '—' }}
+            </span>
+          </div>
+          <div class="col-6 col-md-3"><span class="text-muted">單位：</span>
+            <strong>{{ chk.unit.name if chk.unit else '—' }}</strong></div>
+          <div class="col-6 col-md-3"><span class="text-muted">檢帳日期：</span>
+            <strong>{{ chk.audit_date.strftime('%Y/%m/%d') }}</strong></div>
+          <div class="col-6 col-md-3"><span class="text-muted">檢帳員：</span>
+            <strong>{{ chk.auditor or '—' }}</strong></div>
+        </div>
+
+        <!-- 帳冊 + 現金存款並排 -->
+        <div class="row g-0 mb-3">
+          <!-- 左：帳冊 -->
+          <div class="col-md-6 pe-md-2">
+            <table class="table table-bordered table-sm mb-0">
+              <thead class="table-light">
+                <tr><th colspan="2" class="text-center small fw-semibold">帳冊</th></tr>
+              </thead>
+              <tbody class="small">
+                {% if chk.quarter == 1 %}
+                <tr>
+                  <td class="ps-2 w-50 text-muted">{{ chk.year - 1 }}年度結存</td>
+                  <td class="text-end pe-2 text-secondary">{{ '{:,.0f}'.format(chk.prev_period_balance) }}</td>
+                </tr>
+                {% elif chk.quarter in [2, 3, 4] %}
+                <tr>
+                  <td class="ps-2 w-50 text-muted">上一季累計結存</td>
+                  <td class="text-end pe-2 text-secondary">{{ '{:,.0f}'.format(chk.prev_period_balance) }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                  <td class="ps-2 w-50">總收入</td>
+                  <td class="text-end text-success pe-2">{{ '{:,.0f}'.format(chk.total_income) }}</td>
+                </tr>
+                <tr>
+                  <td class="ps-2">總支出</td>
+                  <td class="text-end text-danger pe-2">{{ '{:,.0f}'.format(chk.total_expense) }}</td>
+                </tr>
+                <tr class="table-light">
+                  <td class="ps-2 fw-semibold">結餘</td>
+                  <td class="text-end fw-semibold pe-2
+                    {% if chk.net_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {{ '{:,.0f}'.format(chk.net_balance) }}
+                  </td>
+                </tr>
+                <tr class="table-primary">
+                  <td class="ps-2 fw-semibold">累計結存</td>
+                  <td class="text-end fw-semibold text-primary pe-2">{{ '{:,.0f}'.format(chk.cumulative_balance) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 右：現金及存款 -->
+          <div class="col-md-6 ps-md-2 mt-2 mt-md-0">
+            <table class="table table-bordered table-sm mb-0">
+              <thead class="table-light">
+                <tr><th colspan="2" class="text-center small fw-semibold">現金及存款</th></tr>
+              </thead>
+              <tbody class="small">
+                {% set rows = [
+                  ('庫存現金',       chk.cash_on_hand),
+                  ('郵局活期存款',   chk.post_savings),
+                  ('郵局定期存款',   chk.post_fixed),
+                  ('銀行活期存款',   chk.bank_savings),
+                  ('銀行定期存款',   chk.bank_fixed),
+                  ('儲蓄互助社股金', chk.credit_union_stock),
+                  ('儲蓄互助社定存', chk.credit_union_fixed),
+                ] %}
+                {% for label, val in rows %}
+                <tr>
+                  <td class="ps-2 w-50">{{ label }}</td>
+                  <td class="text-end pe-2 {% if val > 0 %}text-dark{% else %}text-muted{% endif %}">
+                    {% if val > 0 %}{{ '{:,.0f}'.format(val) }}{% else %}—{% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+                <tr class="table-info">
+                  <td class="ps-2 fw-semibold">存款及現金總額</td>
+                  <td class="text-end fw-semibold text-info pe-2">{{ '{:,.0f}'.format(chk.total_deposits) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 檢帳結果 -->
+        <div class="row g-3 mb-3">
+          <div class="col-md-7">
+            <div class="border rounded p-2 small">
+              <span class="text-muted">檢帳結果：</span>
+              <span class="fw-semibold
+                {% if chk.difference == 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ chk.audit_result or '—' }}
+              </span>
+            </div>
+          </div>
+          <div class="col-md-5">
+            <div class="border rounded p-2 small d-flex justify-content-between align-items-center">
+              <span class="text-muted">與手帳之差額：</span>
+              <span class="fw-bold fs-6
+                {% if chk.difference == 0 %}text-success{% else %}text-danger{% endif %}">
+                {% if chk.difference == 0 %}
+                  <i class="bi bi-check-circle-fill"></i> NT$ 0（相符）
+                {% else %}
+                  <i class="bi bi-exclamation-triangle-fill"></i>
+                  NT$ {{ '{:,.0f}'.format(chk.difference) }}
+                {% endif %}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 帳戶資訊 -->
+        {% if chk.post_account_name or chk.bank_name %}
+        <div class="row g-2 mb-3 small">
+          {% if chk.post_account_name or chk.post_account_no %}
+          <div class="col-md-6">
+            <div class="border rounded p-2">
+              <div class="text-muted mb-1">郵局帳戶</div>
+              <div>戶名：{{ chk.post_account_name or '—' }}</div>
+              <div>帳號：<span class="font-monospace">{{ chk.post_account_no or '—' }}</span></div>
+            </div>
+          </div>
+          {% endif %}
+          {% if chk.bank_name or chk.bank_account_no %}
+          <div class="col-md-6">
+            <div class="border rounded p-2">
+              <div class="text-muted mb-1">銀行帳戶</div>
+              <div>{{ chk.bank_name or '' }} {{ chk.bank_account_name or '' }}</div>
+              <div>帳號：<span class="font-monospace">{{ chk.bank_account_no or '—' }}</span></div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- 建議事項 -->
+        {% if chk.suggestions %}
+        <div class="border rounded p-2 small mb-3">
+          <span class="text-muted">建議事項：</span>{{ chk.suggestions }}
+        </div>
+        {% endif %}
+
+        <!-- 列印簽核欄 -->
+        <div class="border-top pt-3 mt-2">
+          <div class="row text-center small">
+            <div class="col-4">
+              檢帳員：<br>
+              <span class="fw-semibold">{{ chk.auditor or '________________' }}</span>
+            </div>
+            <div class="col-4">覆核人：________________</div>
+            <div class="col-4">財務負責人：________________</div>
+          </div>
+          <div class="row text-center small mt-3 text-muted">
+            <div class="col-6">列印日期：{{ today.strftime('%Y/%m/%d') }}</div>
+            <div class="col-6">建立時間：{{ chk.created_at.strftime('%Y/%m/%d %H:%M') }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+@media print {
+  .no-print { display: none !important; }
+  nav, footer, .navbar { display: none !important; }
+  body { background: white !important; }
+  .card { border: 1px solid #ccc !important; box-shadow: none !important; }
+  .card-header { background: #003366 !important; color: white !important; -webkit-print-color-adjust: exact; }
+}
+</style>
+{% endblock %}

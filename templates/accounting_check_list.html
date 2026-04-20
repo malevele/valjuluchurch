@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}會計檢帳表{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-clipboard2-check text-primary"></i> 會計檢帳表</h4>
+  <a href="{{ url_for('accounting_check_new') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-circle"></i> 新增檢帳表
+  </a>
+</div>
+
+<!-- 年度＋類型篩選 -->
+<form method="get" class="mb-3 d-flex gap-2 align-items-center flex-wrap">
+  <label class="form-label mb-0">年度：</label>
+  <select name="year" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    {% for y in years %}
+    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}年</option>
+    {% endfor %}
+  </select>
+  <label class="form-label mb-0 ms-2">類型：</label>
+  <select name="audit_type" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    <option value="" {% if not audit_type %}selected{% endif %}>全部類型</option>
+    <optgroup label="── 季度查帳 ──">
+      <option value="第一季查帳" {% if audit_type == '第一季查帳' %}selected{% endif %}>第一季查帳</option>
+      <option value="第二季查帳" {% if audit_type == '第二季查帳' %}selected{% endif %}>第二季查帳</option>
+      <option value="第三季查帳" {% if audit_type == '第三季查帳' %}selected{% endif %}>第三季查帳</option>
+      <option value="第四季查帳" {% if audit_type == '第四季查帳' %}selected{% endif %}>第四季查帳</option>
+    </optgroup>
+    <optgroup label="── 年度 ──">
+      <option value="年度總查" {% if audit_type == '年度總查' %}selected{% endif %}>年度總查</option>
+    </optgroup>
+  </select>
+</form>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr class="small fw-semibold text-center">
+          <th class="text-start ps-3">年月</th>
+          <th class="text-start">類型</th>
+          <th class="text-start">單位</th>
+          <th>總收入</th>
+          <th>總支出</th>
+          <th>結存</th>
+          <th>存款及現金總額</th>
+          <th>差額</th>
+          <th>檢帳員</th>
+          <th>檢帳日期</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in checks %}
+        {% set diff = c.difference %}
+        <tr class="small">
+          <td class="ps-3 fw-semibold">
+            {{ c.year }}年
+            {% if c.quarter %}第{{ c.quarter }}季{% elif c.audit_type == '年度總查' %}年度{% endif %}
+          </td>
+          <td>
+            <span class="badge
+              {% if c.audit_type == '年度總查' %}bg-primary
+              {% elif '第一季' in (c.audit_type or '') %}bg-success
+              {% elif '第二季' in (c.audit_type or '') %}bg-info text-dark
+              {% elif '第三季' in (c.audit_type or '') %}bg-warning text-dark
+              {% elif '第四季' in (c.audit_type or '') %}bg-danger
+              {% else %}bg-secondary{% endif %}">
+              {{ c.audit_type or '—' }}
+            </span>
+          </td>
+          <td>{{ c.unit.name if c.unit else '—' }}</td>
+          <td class="text-end text-success">{{ '{:,.0f}'.format(c.total_income) }}</td>
+          <td class="text-end text-danger">{{ '{:,.0f}'.format(c.total_expense) }}</td>
+          <td class="text-end text-primary fw-semibold">{{ '{:,.0f}'.format(c.current_balance) }}</td>
+          <td class="text-end text-info">{{ '{:,.0f}'.format(c.total_deposits) }}</td>
+          <td class="text-center fw-semibold {% if diff == 0 %}text-success{% else %}text-danger{% endif %}">
+            {% if diff == 0 %}
+              <i class="bi bi-check-circle-fill"></i> 相符
+            {% else %}
+              <i class="bi bi-exclamation-triangle-fill"></i> {{ '{:,.0f}'.format(diff) }}
+            {% endif %}
+          </td>
+          <td>{{ c.auditor or '—' }}</td>
+          <td>{{ c.audit_date.strftime('%Y/%m/%d') }}</td>
+          <td class="text-end pe-3">
+            <a href="{{ url_for('accounting_check_detail', chk_id=c.id) }}"
+               class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-eye"></i> 查看
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="10" class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-4 d-block mb-1"></i>
+            {{ year }}年度尚無檢帳記錄，
+            <a href="{{ url_for('accounting_check_new') }}">立即新增</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

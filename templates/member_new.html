@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}新增會友{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-person-plus text-primary"></i> 新增會友</h5>
+      </div>
+      <form method="post">
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">姓名 <span class="text-danger">*</span></label>
+              <input type="text" name="name" class="form-control" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">性別</label>
+              <select name="gender" class="form-select">
+                <option value="">—</option>
+                <option value="男">男</option>
+                <option value="女">女</option>
+              </select>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label fw-semibold">出生日期</label>
+              <input type="date" name="birth_date" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">聯絡電話</label>
+              <input type="text" name="phone" class="form-control" placeholder="09xx-xxx-xxx">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">電子信箱</label>
+              <input type="email" name="email" class="form-control">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">戶籍/住址</label>
+              <input type="text" name="address" class="form-control">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">入會日期</label>
+              <input type="date" name="join_date" class="form-control">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">受洗日期</label>
+              <input type="date" name="baptism_date" class="form-control">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">狀態</label>
+              <select name="status" class="form-select">
+                <option value="在籍">在籍</option>
+                <option value="人在籍不在">人在籍不在</option>
+                <option value="人不在籍在">人不在籍在</option>
+                <option value="轉出">轉出</option>
+                <option value="安息">安息</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">備註</label>
+              <textarea name="notes" class="form-control" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between">
+          <a href="{{ url_for('member_list') }}" class="btn btn-secondary">取消</a>
+          <div class="d-flex gap-2">
+            <button type="submit" name="next" value="1" class="btn btn-success">
+              <i class="bi bi-plus-circle"></i> 儲存並新增下一筆
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-save"></i> 儲存
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

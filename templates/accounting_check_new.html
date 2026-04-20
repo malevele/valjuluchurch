@@ -1,0 +1,415 @@
+{% extends 'base.html' %}
+{% block title %}新增查帳表{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center mb-3 gap-2">
+  <a href="{{ url_for('accounting_check_list') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h5 class="mb-0"><i class="bi bi-clipboard2-check text-primary"></i> 新增查帳表</h5>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <form method="post">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h6 class="mb-0"><i class="bi bi-clipboard2-check"></i> 台灣基督長老教會瓦酪露教會</h6>
+          <small>查帳表 · 統一編號 87878809</small>
+        </div>
+
+        <div class="card-body">
+
+          <!-- 基本資訊 -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">查帳類型 <span class="text-danger">*</span></label>
+              <select name="audit_type" id="form_audit_type" class="form-select" required
+                      onchange="onTypeChange(); autoPrefill()">
+                <optgroup label="── 季度查帳 ──">
+                  <option value="第一季查帳" {% if audit_type=='第一季查帳' %}selected{% endif %}>第一季（1–3月）</option>
+                  <option value="第二季查帳" {% if audit_type=='第二季查帳' %}selected{% endif %}>第二季（4–6月）</option>
+                  <option value="第三季查帳" {% if audit_type=='第三季查帳' %}selected{% endif %}>第三季（7–9月）</option>
+                  <option value="第四季查帳" {% if audit_type=='第四季查帳' %}selected{% endif %}>第四季（10–12月）</option>
+                </optgroup>
+                <optgroup label="── 年度 ──">
+                  <option value="年度總查" {% if audit_type=='年度總查' %}selected{% endif %}>年度總查（1–12月）</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">年度 <span class="text-danger">*</span></label>
+              <select name="year" id="form_year" class="form-select" required
+                      onchange="updatePrevYearLabel(); autoPrefill()">
+                {% for y in years %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}年</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">單位 <span class="text-danger">*</span></label>
+              <select name="unit_id" id="form_unit" class="form-select" required
+                      onchange="autoPrefill()">
+                <option value="">— 請選擇單位 —</option>
+                {% for u in units %}
+                <option value="{{ u.id }}" {% if u.id == unit_id %}selected{% endif %}>{{ u.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">查帳日期 <span class="text-danger">*</span></label>
+              <input type="date" name="audit_date" class="form-control"
+                     value="{{ today.strftime('%Y-%m-%d') }}" required>
+            </div>
+          </div>
+
+          <!-- 帳冊 + 現金存款並排 -->
+          <div class="row g-0 mb-3">
+
+            <!-- 左：帳冊 -->
+            <div class="col-md-6 pe-md-2">
+              <table class="table table-bordered table-sm mb-0">
+                <thead class="table-light">
+                  <tr><th colspan="2" class="text-center small fw-semibold">
+                    帳冊 <span id="period_label" class="text-primary"></span>
+                  </th></tr>
+                  <tr class="small"><th>項目</th><th class="text-end">金額（NT$）</th></tr>
+                </thead>
+                <tbody class="small">
+                  <!-- 上年度結存（只有第一季顯示） -->
+                  <tr id="row_prev_year" style="display:none">
+                    <td class="ps-2 text-muted" id="lbl_prev_year">—年度結存</td>
+                    <td>
+                      <input type="number" name="prev_period_balance" id="f_prev_period"
+                             class="form-control form-control-sm text-end text-secondary bg-light"
+                             step="1" value="0" readonly>
+                    </td>
+                  </tr>
+                  <!-- 上一季累計結存（第二到第四季顯示） -->
+                  <tr id="row_prev_quarter" style="display:none">
+                    <td class="ps-2 text-muted">上一季累計結存</td>
+                    <td>
+                      <input type="number" id="f_prev_quarter_display"
+                             class="form-control form-control-sm text-end text-secondary bg-light"
+                             step="1" value="0" readonly tabindex="-1">
+                      <input type="hidden" name="prev_period_balance" id="f_prev_period_q">
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="ps-2">總收入</td>
+                    <td>
+                      <input type="number" name="total_income" id="f_total_income"
+                             class="form-control form-control-sm text-end text-success"
+                             min="0" step="1" value="0" oninput="calcNet()">
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="ps-2">總支出</td>
+                    <td>
+                      <input type="number" name="total_expense" id="f_total_expense"
+                             class="form-control form-control-sm text-end text-danger"
+                             min="0" step="1" value="0" oninput="calcNet()">
+                    </td>
+                  </tr>
+                  <tr class="table-light">
+                    <td class="ps-2 fw-semibold">結餘</td>
+                    <td>
+                      <input type="number" name="net_balance" id="f_net_balance"
+                             class="form-control form-control-sm text-end fw-semibold"
+                             step="1" value="0" readonly>
+                    </td>
+                  </tr>
+                  <tr class="table-primary">
+                    <td class="ps-2 fw-semibold">累計結存</td>
+                    <td>
+                      <input type="number" name="cumulative_balance" id="f_cumulative_balance"
+                             class="form-control form-control-sm text-end fw-semibold text-primary bg-light"
+                             step="1" value="0" readonly>
+                      <input type="hidden" name="current_balance" id="f_current_balance" value="0">
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div id="prefill_status" class="text-success small mt-1"></div>
+            </div>
+
+            <!-- 右：現金及存款 -->
+            <div class="col-md-6 ps-md-2 mt-2 mt-md-0">
+              <table class="table table-bordered table-sm mb-0">
+                <thead class="table-light">
+                  <tr><th colspan="2" class="text-center small fw-semibold">現金及存款</th></tr>
+                  <tr class="small"><th>項目</th><th class="text-end">金額（NT$）</th></tr>
+                </thead>
+                <tbody class="small">
+                  <tr><td class="ps-2">庫存現金</td><td>
+                    <input type="number" name="cash_on_hand" id="f_cash_on_hand"
+                           class="form-control form-control-sm text-end"
+                           min="0" step="1" value="0" oninput="calcTotal()">
+                  </td></tr>
+                  <tr><td class="ps-2">郵局活期存款</td><td>
+                    <input type="number" name="post_savings" id="f_post_savings"
+                           class="form-control form-control-sm text-end"
+                           min="0" step="1" value="0" oninput="calcTotal()">
+                  </td></tr>
+                  <tr><td class="ps-2">郵局定期存款</td><td>
+                    <input type="number" name="post_fixed" id="f_post_fixed"
+                           class="form-control form-control-sm text-end"
+                           min="0" step="1" value="0" oninput="calcTotal()">
+                  </td></tr>
+                  <tr><td class="ps-2">銀行活期存款</td><td>
+                    <input type="number" name="bank_savings" id="f_bank_savings"
+                           class="form-control form-control-sm text-end"
+                           min="0" step="1" value="0" oninput="calcTotal()">
+                  </td></tr>
+                  <tr><td class="ps-2">銀行定期存款</td><td>
+                    <input type="number" name="bank_fixed" id="f_bank_fixed"
+                           class="form-control form-control-sm text-end"
+                           min="0" step="1" value="0" oninput="calcTotal()">
+                  </td></tr>
+                  <tr><td class="ps-2">儲蓄互助社股金</td><td>
+                    <input type="number" name="credit_union_stock" id="f_credit_union_stock"
+                           class="form-control form-control-sm text-end"
+                           min="0" step="1" value="0" oninput="calcTotal()">
+                  </td></tr>
+                  <tr><td class="ps-2">儲蓄互助社定存</td><td>
+                    <input type="number" name="credit_union_fixed" id="f_credit_union_fixed"
+                           class="form-control form-control-sm text-end"
+                           min="0" step="1" value="0" oninput="calcTotal()">
+                  </td></tr>
+                  <tr class="table-info"><td class="ps-2 fw-semibold">存款及現金總額</td><td>
+                    <input type="number" name="total_deposits" id="f_total_deposits"
+                           class="form-control form-control-sm text-end fw-semibold text-info"
+                           step="1" value="0" readonly>
+                  </td></tr>
+                </tbody>
+              </table>
+              <div id="bank_status" class="mt-1 d-flex flex-wrap gap-1"></div>
+            </div>
+          </div>
+
+          <!-- 檢帳結果 -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">檢帳結果</label>
+              <input type="text" name="audit_result" id="f_audit_result"
+                     class="form-control form-control-sm" placeholder="例：帳冊核對相符">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">與手帳之差額</label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text">NT$</span>
+                <input type="number" name="difference" id="f_difference"
+                       class="form-control text-end" step="1" value="0">
+              </div>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+              <button type="button" class="btn btn-sm btn-outline-secondary w-100" onclick="calcDiff()">
+                <i class="bi bi-calculator"></i> 自動計算差額
+              </button>
+            </div>
+          </div>
+
+          <!-- 帳戶資訊 -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">郵局戶名</label>
+              <input type="text" name="post_account_name" id="f_post_account_name" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">郵局帳號</label>
+              <input type="text" name="post_account_no" id="f_post_account_no" class="form-control form-control-sm font-monospace">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-semibold">銀行名稱</label>
+              <input type="text" name="bank_name" id="f_bank_name" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-semibold">銀行戶名</label>
+              <input type="text" name="bank_account_name" id="f_bank_account_name" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-semibold">銀行帳號</label>
+              <input type="text" name="bank_account_no" id="f_bank_account_no" class="form-control form-control-sm font-monospace">
+            </div>
+          </div>
+
+          <!-- 建議事項 & 查帳員 -->
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label small fw-semibold">建議事項</label>
+              <textarea name="suggestions" class="form-control form-control-sm" rows="2"></textarea>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">查帳員 <span class="text-danger">*</span></label>
+              <input type="text" name="auditor" class="form-control form-control-sm" placeholder="簽名" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer d-flex justify-content-between">
+          <a href="{{ url_for('accounting_check_list') }}" class="btn btn-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> 返回
+          </a>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-save"></i> 儲存查帳表
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PERIOD_LABELS = {
+  '第一季查帳': '（1月–3月）',
+  '第二季查帳': '（4月–6月）',
+  '第三季查帳': '（7月–9月）',
+  '第四季查帳': '（10月–12月）',
+  '年度總查':   '（1月–12月）',
+};
+
+function updatePrevYearLabel() {
+  const yr = parseInt(document.getElementById('form_year').value) || new Date().getFullYear();
+  document.getElementById('lbl_prev_year').textContent = `${yr - 1}年度結存`;
+}
+
+function onTypeChange() {
+  const type = document.getElementById('form_audit_type').value;
+  document.getElementById('period_label').textContent = PERIOD_LABELS[type] || '';
+  const isQ1     = type === '第一季查帳';
+  const isOtherQ = ['第二季查帳','第三季查帳','第四季查帳'].includes(type);
+  document.getElementById('row_prev_year').style.display    = isQ1     ? '' : 'none';
+  document.getElementById('row_prev_quarter').style.display = isOtherQ ? '' : 'none';
+  updatePrevYearLabel();
+}
+
+let _prefillTimer = null;
+function autoPrefill() {
+  clearTimeout(_prefillTimer);
+  _prefillTimer = setTimeout(_doPrefill, 300);
+}
+
+function _doPrefill() {
+  const uid  = document.getElementById('form_unit').value;
+  const year = document.getElementById('form_year').value;
+  const type = document.getElementById('form_audit_type').value;
+  if (!uid || !year) return;
+
+  document.getElementById('prefill_status').textContent = '載入中…';
+
+  fetch(`/api/accounting-check/prefill?unit_id=${uid}&year=${year}&audit_type=${encodeURIComponent(type)}`)
+    .then(r => r.json())
+    .then(d => {
+      const prev = Math.round(d.prev_period_balance || 0);
+      document.getElementById('f_prev_period').value   = prev;
+      document.getElementById('f_prev_quarter_display') && (document.getElementById('f_prev_quarter_display').value = prev);
+      if (document.getElementById('f_prev_period_q'))
+        document.getElementById('f_prev_period_q').value = prev;
+
+      document.getElementById('f_total_income').value  = Math.round(d.total_income || 0);
+      document.getElementById('f_total_expense').value = Math.round(d.total_expense || 0);
+      calcNet();  // 自動計算結餘與累計結存
+
+      // 清空存款欄位
+      ['f_post_savings','f_post_fixed','f_bank_savings','f_bank_fixed',
+       'f_credit_union_stock','f_credit_union_fixed'].forEach(id =>
+        document.getElementById(id).value = 0);
+      ['f_post_account_name','f_post_account_no','f_bank_name',
+       'f_bank_account_name','f_bank_account_no'].forEach(id =>
+        document.getElementById(id).value = '');
+
+      (d.banks || []).forEach(b => fillBank(b));
+      calcTotal();
+
+      // 銀行 badge
+      const cont = document.getElementById('bank_status');
+      cont.innerHTML = '';
+      (d.banks || []).forEach(b => {
+        const s = document.createElement('span');
+        s.className = 'badge bg-info text-dark small';
+        s.textContent = `${b.bank_name} ${b.account_type} NT$${Math.round(b.balance).toLocaleString()}`;
+        cont.appendChild(s);
+      });
+
+      document.getElementById('prefill_status').textContent =
+        `✓ 已載入 ${d.period || ''} 資料`;
+    })
+    .catch(() => { document.getElementById('prefill_status').textContent = '載入失敗'; });
+}
+
+function fillBank(b) {
+  const name    = b.bank_name.toLowerCase();
+  const isPost   = name.includes('郵局') || name.includes('post');
+  const isCredit = name.includes('儲蓄互助') || name.includes('信用合作');
+  const isFixed  = b.account_type === '定期';
+  const bal = Math.round(b.balance);
+  if (isPost && isFixed) {
+    document.getElementById('f_post_fixed').value = bal;
+    document.getElementById('f_post_account_name').value = b.account_name || '';
+    document.getElementById('f_post_account_no').value   = b.account_no  || '';
+  } else if (isPost) {
+    document.getElementById('f_post_savings').value = bal;
+    document.getElementById('f_post_account_name').value = b.account_name || '';
+    document.getElementById('f_post_account_no').value   = b.account_no  || '';
+  } else if (isCredit && isFixed) {
+    document.getElementById('f_credit_union_fixed').value = bal;
+  } else if (isCredit) {
+    document.getElementById('f_credit_union_stock').value = bal;
+  } else if (isFixed) {
+    document.getElementById('f_bank_fixed').value = bal;
+    document.getElementById('f_bank_name').value         = b.bank_name   || '';
+    document.getElementById('f_bank_account_name').value = b.account_name || '';
+    document.getElementById('f_bank_account_no').value   = b.account_no  || '';
+  } else {
+    document.getElementById('f_bank_savings').value = bal;
+    document.getElementById('f_bank_name').value         = b.bank_name   || '';
+    document.getElementById('f_bank_account_name').value = b.account_name || '';
+    document.getElementById('f_bank_account_no').value   = b.account_no  || '';
+  }
+}
+
+function calcNet() {
+  const inc = parseFloat(document.getElementById('f_total_income').value) || 0;
+  const exp = parseFloat(document.getElementById('f_total_expense').value) || 0;
+  const net = Math.round(inc - exp);
+  document.getElementById('f_net_balance').value = net;
+
+  // 累計結存 = 上期結存 + 結餘
+  const type = document.getElementById('form_audit_type').value;
+  let prev = 0;
+  if (type === '第一季查帳') {
+    prev = parseFloat(document.getElementById('f_prev_period').value) || 0;
+  } else if (['第二季查帳','第三季查帳','第四季查帳'].includes(type)) {
+    prev = parseFloat(document.getElementById('f_prev_quarter_display').value) || 0;
+  }
+  const cumul = Math.round(prev + net);
+  document.getElementById('f_cumulative_balance').value = cumul;
+  document.getElementById('f_current_balance').value    = cumul;
+}
+
+function calcTotal() {
+  const ids = ['f_cash_on_hand','f_post_savings','f_post_fixed',
+               'f_bank_savings','f_bank_fixed','f_credit_union_stock','f_credit_union_fixed'];
+  const total = ids.reduce((s,id) => s + (parseFloat(document.getElementById(id).value)||0), 0);
+  document.getElementById('f_total_deposits').value = Math.round(total);
+}
+
+function calcDiff() {
+  const bal   = parseFloat(document.getElementById('f_current_balance').value) || 0;
+  const total = parseFloat(document.getElementById('f_total_deposits').value) || 0;
+  const diff  = Math.round(bal - total);
+  document.getElementById('f_difference').value = diff;
+  document.getElementById('f_audit_result').value =
+    diff === 0 ? '帳冊核對相符' : `差額 ${diff.toLocaleString()} 元，待查明`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  onTypeChange();
+  // 若頁面載入時已選好單位，自動帶入
+  if (document.getElementById('form_unit').value) autoPrefill();
+});
+</script>
+{% endblock %}

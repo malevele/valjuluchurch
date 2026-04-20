@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% block title %}銀行帳戶設定{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-bank text-info"></i> 銀行帳戶管理</h4>
+  <button class="btn btn-info btn-sm text-white" data-bs-toggle="modal" data-bs-target="#addBankModal">
+    <i class="bi bi-plus-lg"></i> 新增帳戶
+  </button>
+</div>
+
+<!-- 各單位總覽 -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-primary-subtle">
+    <h6 class="mb-0 text-primary"><i class="bi bi-wallet2"></i> 各單位資金總覽</h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>單位</th>
+          <th class="text-end">庫存現金</th>
+          <th class="text-end">銀行登記餘額</th>
+          <th class="text-end">現金＋銀行合計</th>
+          <th class="text-end">現金簿帳面總額</th>
+          <th class="text-center">核對</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in units %}
+        {% set cb       = unit_balance.get(u.id, 0) %}
+        {% set cash     = unit_cash.get(u.id, 0) %}
+        {% set bank_lst = u.bank_accounts | selectattr('is_active') | list %}
+        {% set bank_tot = bank_lst | sum(attribute='current_balance') %}
+        {% set subtotal = cash + bank_tot %}
+        {% set diff     = cb - subtotal %}
+        <tr>
+          <td class="fw-semibold small">
+            <a href="{{ url_for('cashbook', unit_id=u.id) }}" class="text-decoration-none">{{ u.name }}</a>
+          </td>
+          <td class="text-end small text-success fw-semibold">NT$ {{ '{:,.0f}'.format(cash) }}</td>
+          <td class="text-end small text-info">
+            {% if bank_lst %}NT$ {{ '{:,.0f}'.format(bank_tot) }}
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td class="text-end small fw-bold">NT$ {{ '{:,.0f}'.format(subtotal) }}</td>
+          <td class="text-end small text-primary fw-bold">NT$ {{ '{:,.0f}'.format(cb) }}</td>
+          <td class="text-center small">
+            {% if diff == 0 %}
+            <span class="badge bg-success"><i class="bi bi-check-circle"></i> 相符</span>
+            {% else %}
+            <span class="badge bg-danger">差 NT$ {{ '{:,.0f}'.format(diff | abs) }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-secondary fw-bold small">
+        <tr>
+          <td>合計</td>
+          <td class="text-end text-success">NT$ {{ '{:,.0f}'.format(total_cash) }}</td>
+          <td class="text-end text-info">NT$ {{ '{:,.0f}'.format(total_bank) }}</td>
+          <td class="text-end">NT$ {{ '{:,.0f}'.format(total_cash + total_bank) }}</td>
+          <td class="text-end text-primary">NT$ {{ '{:,.0f}'.format(total_cashbook) }}</td>
+          <td class="text-center">
+            {% set grand_diff = total_cashbook - total_cash - total_bank %}
+            {% if grand_diff == 0 %}
+            <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> 相符</span>
+            {% else %}
+            <span class="badge bg-danger">差 NT$ {{ '{:,.0f}'.format(grand_diff | abs) }}</span>
+            {% endif %}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- 銀行帳戶列表 -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent">
+    <h6 class="mb-0"><i class="bi bi-credit-card"></i> 銀行帳戶明細</h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>所屬單位</th><th>銀行名稱</th><th>帳號</th>
+          <th class="text-end">登記餘額</th><th>備註</th><th class="text-center">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in banks %}
+        {% set cb = unit_balance.get(b.unit_id, none) if b.unit_id else none %}
+        <tr>
+          <td class="small">
+            {% if b.unit %}
+            <span class="badge bg-secondary">{{ b.unit.name }}</span>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td class="fw-semibold">{{ b.bank_name }}</td>
+          <td class="font-monospace small">{{ b.account_no }}</td>
+          <td class="text-end fw-bold text-info">NT$ {{ '{:,.0f}'.format(b.current_balance) }}</td>
+          <td class="small text-muted">{{ b.notes or '' }}</td>
+          <td class="text-center">
+            <button class="btn btn-xs btn-outline-info"
+                    data-bs-toggle="modal" data-bs-target="#updateBalanceModal"
+                    data-id="{{ b.id }}" data-name="{{ b.bank_name }}"
+                    data-balance="{{ b.current_balance }}">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <form method="post" action="{{ url_for('settings_banks_delete', b_id=b.id) }}" class="d-inline"
+                  onsubmit="return confirm('確定停用此帳戶？')">
+              <button class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">
+            <i class="bi bi-bank fs-3 d-block mb-2"></i>尚未設定銀行帳戶
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 新增帳戶 Modal -->
+<div class="modal fade" id="addBankModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">新增銀行帳戶</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{{ url_for('settings_banks_add') }}">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">所屬單位 <span class="text-danger">*</span></label>
+              <select name="unit_id" class="form-select" required>
+                <option value="">— 請選擇單位 —</option>
+                {% for u in units %}
+                <option value="{{ u.id }}">{{ u.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-7">
+              <label class="form-label">銀行名稱 <span class="text-danger">*</span></label>
+              <input type="text" name="bank_name" class="form-control" placeholder="例：第一商業銀行" required>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">帳戶類型</label>
+              <select name="account_type" class="form-select">
+                <option value="活期">活期</option>
+                <option value="定期">定期</option>
+                <option value="郵政劃撥">郵政劃撥</option>
+                <option value="股金">股金</option>
+                <option value="股息">股息</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">帳號 <span class="text-danger">*</span></label>
+              <input type="text" name="account_no" class="form-control" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">帳戶名稱</label>
+              <input type="text" name="account_name" class="form-control"
+                     value="台灣基督長老教會瓦酪露教會">
+            </div>
+            <div class="col-12">
+              <label class="form-label">目前餘額</label>
+              <div class="input-group">
+                <span class="input-group-text">NT$</span>
+                <input type="number" name="current_balance" class="form-control" min="0" step="1" value="0">
+              </div>
+              <div class="form-text text-warning">
+                <i class="bi bi-info-circle"></i> 此餘額應與所選單位的現金簿帳面結餘相同
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">備註</label>
+              <input type="text" name="notes" class="form-control">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-info text-white">新增</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 更新餘額 Modal -->
+<div class="modal fade" id="updateBalanceModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">更新銀行餘額</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="updateBalanceForm">
+        <div class="modal-body">
+          <p id="updateBankName" class="fw-semibold mb-3"></p>
+          <label class="form-label">最新餘額</label>
+          <div class="input-group">
+            <span class="input-group-text">NT$</span>
+            <input type="number" name="current_balance" id="updateBalanceInput"
+                   class="form-control" min="0" step="1">
+          </div>
+          <div class="form-text text-warning mt-1">
+            <i class="bi bi-exclamation-triangle"></i> 請確認與現金簿帳面結餘一致
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-info btn-sm text-white">更新</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('updateBalanceModal').addEventListener('show.bs.modal', function(e) {
+  const btn = e.relatedTarget;
+  document.getElementById('updateBankName').textContent = btn.dataset.name;
+  document.getElementById('updateBalanceInput').value = btn.dataset.balance;
+  document.getElementById('updateBalanceForm').action = '/settings/banks/update_balance/' + btn.dataset.id;
+});
+</script>
+{% endblock %}

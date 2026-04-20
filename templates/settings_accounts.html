@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% block title %}會計科目設定{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-list-columns text-primary"></i> 會計科目設定</h4>
+  <div class="d-flex gap-2">
+    <button class="btn btn-success btn-sm" data-account-type="income" data-bs-toggle="modal" data-bs-target="#addAccountModal">
+      <i class="bi bi-plus-lg"></i> 新增收入科目
+    </button>
+    <button class="btn btn-danger btn-sm" data-account-type="expense" data-bs-toggle="modal" data-bs-target="#addAccountModal">
+      <i class="bi bi-plus-lg"></i> 新增支出科目
+    </button>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- 收入科目 -->
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-success-subtle">
+        <h6 class="mb-0 text-success"><i class="bi bi-arrow-up-circle"></i> 收入科目</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th style="width:60px">代碼</th>
+              <th style="width:35%">名稱</th>
+              <th style="width:35%">說明</th>
+              <th style="width:50px" class="text-center">排序</th>
+              <th style="width:80px" class="text-center">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in income_accounts %}
+            <tr>
+              <td class="small font-monospace">{{ a.code }}</td>
+              <td class="small">{{ a.name }}</td>
+              <td class="small text-muted">{{ a.description or '' }}</td>
+              <td class="text-center small text-muted">{{ a.sort_order }}</td>
+              <td class="text-center">
+                <button class="btn btn-xs btn-outline-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editModal{{ a.id }}"
+                        title="編輯">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <form method="post" action="{{ url_for('settings_accounts_delete', a_id=a.id) }}"
+                      class="d-inline"
+                      onsubmit="return confirm('確定刪除科目「{{ a.name }}」？\n有交易記錄的科目無法刪除。')">
+                  <button class="btn btn-xs btn-outline-danger" title="刪除">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+
+            <!-- 編輯 Modal -->
+            <div class="modal fade" id="editModal{{ a.id }}" tabindex="-1">
+              <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                  <div class="modal-header py-2">
+                    <h6 class="modal-title">編輯科目</h6>
+                    <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+                  </div>
+                  <form method="post" action="{{ url_for('settings_accounts_edit', a_id=a.id) }}">
+                    <div class="modal-body">
+                      <div class="mb-2">
+                        <label class="form-label small">科目代碼</label>
+                        <input type="text" name="code" class="form-control form-control-sm"
+                               value="{{ a.code }}" required>
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label small">科目名稱</label>
+                        <input type="text" name="name" class="form-control form-control-sm"
+                               value="{{ a.name }}" required>
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label small">說明</label>
+                        <input type="text" name="description" class="form-control form-control-sm"
+                               value="{{ a.description or '' }}" placeholder="選填">
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label small">類型</label>
+                        <select name="type" class="form-select form-select-sm">
+                          <option value="income" {% if a.type=='income' %}selected{% endif %}>收入</option>
+                          <option value="expense" {% if a.type=='expense' %}selected{% endif %}>支出</option>
+                        </select>
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label small">排序</label>
+                        <input type="number" name="sort_order" class="form-control form-control-sm"
+                               value="{{ a.sort_order }}">
+                      </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                      <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">取消</button>
+                      <button type="submit" class="btn btn-sm btn-primary">儲存</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-3">尚無收入科目</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 支出科目 -->
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-danger-subtle">
+        <h6 class="mb-0 text-danger"><i class="bi bi-arrow-down-circle"></i> 支出科目</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th style="width:60px">代碼</th>
+              <th style="width:35%">名稱</th>
+              <th style="width:35%">說明</th>
+              <th style="width:50px" class="text-center">排序</th>
+              <th style="width:80px" class="text-center">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in expense_accounts %}
+            <tr>
+              <td class="small font-monospace">{{ a.code }}</td>
+              <td class="small">{{ a.name }}</td>
+              <td class="small text-muted">{{ a.description or '' }}</td>
+              <td class="text-center small text-muted">{{ a.sort_order }}</td>
+              <td class="text-center">
+                <button class="btn btn-xs btn-outline-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editModal{{ a.id }}"
+                        title="編輯">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <form method="post" action="{{ url_for('settings_accounts_delete', a_id=a.id) }}"
+                      class="d-inline"
+                      onsubmit="return confirm('確定刪除科目「{{ a.name }}」？\n有交易記錄的科目無法刪除。')">
+                  <button class="btn btn-xs btn-outline-danger" title="刪除">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+
+            <!-- 編輯 Modal -->
+            <div class="modal fade" id="editModal{{ a.id }}" tabindex="-1">
+              <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                  <div class="modal-header py-2">
+                    <h6 class="modal-title">編輯科目</h6>
+                    <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+                  </div>
+                  <form method="post" action="{{ url_for('settings_accounts_edit', a_id=a.id) }}">
+                    <div class="modal-body">
+                      <div class="mb-2">
+                        <label class="form-label small">科目代碼</label>
+                        <input type="text" name="code" class="form-control form-control-sm"
+                               value="{{ a.code }}" required>
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label small">科目名稱</label>
+                        <input type="text" name="name" class="form-control form-control-sm"
+                               value="{{ a.name }}" required>
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label small">說明</label>
+                        <input type="text" name="description" class="form-control form-control-sm"
+                               value="{{ a.description or '' }}" placeholder="選填">
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label small">類型</label>
+                        <select name="type" class="form-select form-select-sm">
+                          <option value="income" {% if a.type=='income' %}selected{% endif %}>收入</option>
+                          <option value="expense" {% if a.type=='expense' %}selected{% endif %}>支出</option>
+                        </select>
+                      </div>
+                      <div class="mb-2">
+                        <label class="form-label small">排序</label>
+                        <input type="number" name="sort_order" class="form-control form-control-sm"
+                               value="{{ a.sort_order }}">
+                      </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                      <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">取消</button>
+                      <button type="submit" class="btn btn-sm btn-primary">儲存</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-3">尚無支出科目</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 新增科目 Modal -->
+<div class="modal fade" id="addAccountModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-plus-circle text-primary"></i> <span id="addAccountTitle">新增收入科目</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{{ url_for('settings_accounts_add') }}">
+        <input type="hidden" name="next" id="addNextFlag" value="0">
+        <input type="hidden" name="type" id="addAccountType" value="{{ add_type or 'income' }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">科目名稱 <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">說明</label>
+            <input type="text" name="description" class="form-control" placeholder="選填">
+          </div>
+          <div class="form-text text-muted">
+            <i class="bi bi-info-circle"></i> 代碼與排序將依現有科目自動產生，並沿用目前類別
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="submit" onclick="document.getElementById('addNextFlag').value='1'"
+                  class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> 新增下一筆
+          </button>
+          <button type="submit" onclick="document.getElementById('addNextFlag').value='0'"
+                  class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> 新增
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function setAddAccountType(t) {
+    var type = (t === 'expense') ? 'expense' : 'income';
+    var typeInput = document.getElementById('addAccountType');
+    var title = document.getElementById('addAccountTitle');
+    if (typeInput) typeInput.value = type;
+    if (title) title.textContent = (type === 'income') ? '新增收入科目' : '新增支出科目';
+  }
+
+  var addModal = document.getElementById('addAccountModal');
+  if (addModal) {
+    addModal.addEventListener('show.bs.modal', function (event) {
+      var trigger = event.relatedTarget;
+      if (trigger && trigger.dataset && trigger.dataset.accountType) {
+        setAddAccountType(trigger.dataset.accountType);
+      }
+    });
+  }
+
+  var qs = new URLSearchParams(window.location.search);
+  if (qs.get('add') === '1') {
+    setAddAccountType(qs.get('a_type') || '{{ add_type or "income" }}');
+    var el = document.getElementById('addAccountModal');
+    if (el) new bootstrap.Modal(el).show();
+  }
+</script>
+{% endblock %}

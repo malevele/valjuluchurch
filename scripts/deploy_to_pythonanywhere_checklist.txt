@@ -1,0 +1,33 @@
+PythonAnywhere safe deploy quick checklist
+
+1) Build safe zip locally (PowerShell):
+   powershell -ExecutionPolicy Bypass -File .\scripts\build_safe_deploy.ps1
+
+2) Upload generated church_finance_safe_deploy_*.zip to /home/valjuluchurch
+
+3) In PythonAnywhere Bash:
+   cd /home/valjuluchurch
+   LATEST_ZIP=$(ls -t /home/valjuluchurch/church_finance_safe_deploy_*.zip 2>/dev/null | head -1)
+   [ -n "$LATEST_ZIP" ] || { echo "no safe_deploy zip found"; exit 1; }
+   echo "Using: $LATEST_ZIP"
+   cp -r church_finance church_finance_code_backup_$(date +%Y%m%d_%H%M%S)
+   rm -rf _deploy_unpack
+   mkdir -p _deploy_unpack
+   unzip -o "$LATEST_ZIP" -d _deploy_unpack
+   test -f /home/valjuluchurch/_deploy_unpack/app.py || { echo "missing app.py"; exit 1; }
+   rsync -av --delete \
+     --exclude "church_finance/" \
+     --exclude "instance/" \
+     --exclude "*.db" \
+     --exclude "*.sqlite" \
+     --exclude "*.sqlite3" \
+     --exclude "__pycache__/" \
+     /home/valjuluchurch/_deploy_unpack/ /home/valjuluchurch/church_finance/
+   python3 -m py_compile /home/valjuluchurch/church_finance/app.py && echo OK
+   ls -lh /home/valjuluchurch/church_finance/church.db
+
+4) Click Reload on PythonAnywhere Web page
+
+5) Quick health check (optional):
+   tail -n 20 /var/log/valjuluchurch.pythonanywhere.com.error.log
+   tail -n 20 /var/log/valjuluchurch.pythonanywhere.com.server.log

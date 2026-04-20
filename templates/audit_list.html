@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}查帳紀錄{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-clipboard-check text-primary"></i> 查帳紀錄</h4>
+  <a href="{{ url_for('audit_new') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> 新增查帳記錄
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>查帳日期</th><th>查核區間</th><th>類型</th><th>查帳人</th>
+          <th>查核項目</th><th>狀態</th><th class="text-center">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ar in audits %}
+        <tr>
+          <td>{{ ar.audit_date.strftime('%Y-%m-%d') }}</td>
+          <td class="small">{{ ar.period_start.strftime('%Y/%m/%d') }} — {{ ar.period_end.strftime('%Y/%m/%d') }}</td>
+          <td><span class="badge bg-secondary">{{ ar.audit_type }}</span></td>
+          <td>{{ ar.auditor or '—' }}</td>
+          <td>
+            {% set checks = [ar.check_cash_match, ar.check_bank_match, ar.check_receipts,
+                             ar.check_vouchers, ar.check_continuity, ar.check_dedicated_funds,
+                             ar.check_salary, ar.check_seal] %}
+            {% set passed = checks | select | list | length %}
+            <div class="progress" style="height:8px;width:80px">
+              <div class="progress-bar bg-success" style="width:{{ (passed/8*100)|int }}%"></div>
+            </div>
+            <small class="text-muted">{{ passed }}/8 項通過</small>
+          </td>
+          <td>
+            {% if ar.status == '完成' %}
+            <span class="badge bg-success">完成</span>
+            {% elif ar.status == '待改善' %}
+            <span class="badge bg-warning text-dark">待改善</span>
+            {% else %}
+            <span class="badge bg-secondary">待辦</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            <a href="{{ url_for('audit_detail', ar_id=ar.id) }}" class="btn btn-xs btn-outline-primary">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4">
+            <i class="bi bi-clipboard-x fs-3 d-block mb-2"></i>
+            尚無查帳記錄
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

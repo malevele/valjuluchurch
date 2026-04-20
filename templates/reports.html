@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% block title %}月報表{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
+  <h4 class="mb-0"><i class="bi bi-file-earmark-bar-graph text-info"></i> 收支月報表</h4>
+  <div class="d-flex gap-2 align-items-center">
+    <form class="d-flex gap-2 flex-wrap" method="get" id="filterForm">
+      <select name="year" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+        {% for y in years %}<option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}年</option>{% endfor %}
+      </select>
+      <select name="month" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+        {% for m in months %}<option value="{{ m }}" {% if m==month %}selected{% endif %}>{{ m }}月</option>{% endfor %}
+      </select>
+      <select name="unit_id" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+        <option value="0" {% if unit_id == 0 %}selected{% endif %}>全部單位</option>
+        {% for u in units %}
+        <option value="{{ u.id }}" {% if u.id == unit_id %}selected{% endif %}>{{ u.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm no-print">
+      <i class="bi bi-printer"></i> 列印
+    </button>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-info text-white text-center">
+    <h5 class="mb-0">台灣基督長老教會瓦酪露教會</h5>
+    <div>
+      {{ year }}年{{ month }}月份收支報表
+      {% if cur_unit %} ─ {{ cur_unit.name }}{% endif %}
+    </div>
+  </div>
+
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-bordered mb-0 report-table">
+        <thead class="table-light">
+          <tr class="text-center">
+            <th style="width:70%">科目名稱</th>
+            <th style="width:30%">本月金額</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- 上月結存 -->
+          <tr class="table-secondary fw-bold">
+            <td class="ps-3"><i class="bi bi-arrow-left-circle"></i> 上月結存</td>
+            <td class="text-end text-secondary">{{ '{:,.0f}'.format(prev_balance) }}</td>
+          </tr>
+
+          <!-- 收入 -->
+          <tr class="table-success">
+            <th colspan="3" class="py-2">
+              <i class="bi bi-arrow-up-circle text-success"></i> 壹、收入
+            </th>
+          </tr>
+          {% for row in income_rows %}
+          <tr>
+            <td class="ps-4">{{ row.account.name }}</td>
+            <td class="text-end {% if row.monthly > 0 %}text-success fw-semibold{% endif %}">
+              {% if row.monthly > 0 %}{{ '{:,.0f}'.format(row.monthly) }}{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="2" class="text-center text-muted py-2">本月無收入記錄</td></tr>
+          {% endfor %}
+          <tr class="table-success fw-bold">
+            <td class="ps-3"><i class="bi bi-plus-circle"></i> 收入合計</td>
+            <td class="text-end">{{ '{:,.0f}'.format(total_income_monthly) }}</td>
+          </tr>
+
+          <!-- 支出 -->
+          <tr class="table-danger">
+            <th colspan="3" class="py-2">
+              <i class="bi bi-arrow-down-circle text-danger"></i> 貳、支出
+            </th>
+          </tr>
+          {% for row in expense_rows %}
+          <tr>
+            <td class="ps-4">{{ row.account.name }}</td>
+            <td class="text-end {% if row.monthly > 0 %}text-danger fw-semibold{% endif %}">
+              {% if row.monthly > 0 %}{{ '{:,.0f}'.format(row.monthly) }}{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="2" class="text-center text-muted py-2">本月無支出記錄</td></tr>
+          {% endfor %}
+          <tr class="table-danger fw-bold">
+            <td class="ps-3"><i class="bi bi-dash-circle"></i> 支出合計</td>
+            <td class="text-end">{{ '{:,.0f}'.format(total_expense_monthly) }}</td>
+          </tr>
+
+          <!-- 淨額 & 本月結存 -->
+          <tr class="table-primary fw-bold">
+            <td class="ps-3"><i class="bi bi-calculator"></i> 本月淨收支（收入－支出）</td>
+            <td class="text-end {% if net_monthly >= 0 %}text-primary{% else %}text-danger{% endif %}">
+              {{ '{:,.0f}'.format(net_monthly) }}
+            </td>
+          </tr>
+          <tr class="fw-bold fs-6" style="background:#d1e7dd">
+            <td class="ps-3"><i class="bi bi-arrow-right-circle text-success"></i> 本月結存（上月結存＋本月淨收支）</td>
+            <td class="text-end {% if prev_balance + net_monthly >= 0 %}text-success{% else %}text-danger{% endif %}">
+              NT$ {{ '{:,.0f}'.format(prev_balance + net_monthly) }}
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 銀行帳戶與現金核對 -->
+  <div class="card-footer p-0">
+    <div class="table-responsive">
+      <table class="table table-bordered mb-0">
+        <thead class="table-warning">
+          <tr>
+            <th colspan="2" class="py-2 ps-3">
+              <i class="bi bi-bank"></i> 月底核對：現金簿結存 vs 銀行＋現金
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="ps-4">現金簿帳面結存</td>
+            <td class="text-end fw-bold text-success">NT$ {{ '{:,.0f}'.format(closing_balance) }}</td>
+          </tr>
+          {% for b in bank_accounts_list %}
+          <tr>
+            <td class="ps-4 text-muted small">銀行存款：{{ b.bank_name }} {{ b.account_no[-4:] }}</td>
+            <td class="text-end text-info small">NT$ {{ '{:,.0f}'.format(b.current_balance) }}</td>
+          </tr>
+          {% endfor %}
+          <tr class="fw-semibold">
+            <td class="ps-4">銀行存款合計</td>
+            <td class="text-end text-info">NT$ {{ '{:,.0f}'.format(bank_total) }}</td>
+          </tr>
+          {% set diff = closing_balance - bank_total - (recon.cash_amt if recon else 0) %}
+          <tr class="fw-semibold">
+            <td class="ps-4">現金（手存）</td>
+            <td class="text-end">
+              {% if recon %}NT$ {{ '{:,.0f}'.format(recon.cash_amt) }}
+              {% else %}<span class="text-muted">未填寫</span>{% endif %}
+            </td>
+          </tr>
+          <tr class="fw-bold {% if diff == 0 %}table-success{% else %}table-danger{% endif %}">
+            <td class="ps-3">
+              <i class="bi {% if diff == 0 %}bi-check-circle-fill text-success{% else %}bi-exclamation-triangle-fill text-danger{% endif %}"></i>
+              核對結果（帳面 － 銀行 － 現金）
+            </td>
+            <td class="text-end {% if diff == 0 %}text-success{% else %}text-danger{% endif %}">
+              {% if diff == 0 %}相符 ✓
+              {% else %}差異 NT$ {{ '{:,.0f}'.format(diff) }}{% endif %}
+            </td>
+          </tr>
+          {% if recon and recon.reason %}
+          <tr class="table-warning">
+            <td class="ps-3 text-muted small">差異說明</td>
+            <td class="small">{{ recon.reason }}</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 填寫核對表單 -->
+    <form method="post" action="{{ url_for('reports_reconcile') }}" class="p-3 border-top">
+      <input type="hidden" name="year"    value="{{ year }}">
+      <input type="hidden" name="month"   value="{{ month }}">
+      <input type="hidden" name="unit_id" value="{{ unit_id }}">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">現金（手存）NT$</label>
+          <input type="number" name="cash_amt" class="form-control form-control-sm"
+                 min="0" step="1" value="{{ recon.cash_amt if recon else 0 }}">
+        </div>
+        <div class="col-md-5">
+          <label class="form-label small fw-semibold">差異說明原因（若有差異請填寫）</label>
+          <input type="text" name="reason" class="form-control form-control-sm"
+                 placeholder="例：尚未入帳支票 NT$3,000"
+                 value="{{ recon.reason if recon else '' }}">
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-warning btn-sm w-100">
+            <i class="bi bi-save"></i> 儲存核對
+          </button>
+        </div>
+        {% if recon %}
+        <div class="col-md-2 text-muted small">
+          上次核對：{{ recon.confirmed_at.strftime('%m/%d %H:%M') }}
+        </div>
+        {% endif %}
+      </div>
+    </form>
+
+    <div class="p-3 border-top">
+      <div class="row text-center text-muted small">
+        <div class="col-4">製表人：________________</div>
+        <div class="col-4">覆核人：________________</div>
+        <div class="col-4">財務負責人：________________</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+@media print {
+  .no-print, nav, footer, .navbar, .alert { display: none !important; }
+  body { background: white !important; }
+  .card { border: 1px solid #ccc !important; box-shadow: none !important; }
+  .table-success { background-color: #d1e7dd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .table-danger  { background-color: #f8d7da !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .table-primary { background-color: #cfe2ff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+{% endblock %}

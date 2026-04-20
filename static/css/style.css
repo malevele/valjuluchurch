@@ -1,0 +1,64 @@
+/* ── 瓦酪露教會財務系統樣式 ── */
+
+body {
+  font-family: 'Segoe UI', 'Microsoft JhengHei', '微軟正黑體', sans-serif;
+  background-color: #f5f7fa;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+/* 統計卡片 */
+.stat-card {
+  border-radius: 12px !important;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12) !important;
+}
+.stat-label { color: #6c757d; font-size: 0.8rem; margin-bottom: 4px; }
+.stat-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+.stat-icon { width: 50px; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+
+/* 按鈕 */
+.btn-xs {
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+}
+.btn-xs + .btn-xs { margin-left: 2px; }
+
+/* 表格 */
+.table th { font-weight: 600; font-size: 0.82rem; }
+.table td { font-size: 0.85rem; }
+.report-table th, .report-table td { padding: 6px 10px; }
+
+/* 奉獻點算表 */
+.offering-table input[type=number] { -moz-appearance: textfield; }
+.offering-table input[type=number]::-webkit-outer-spin-button,
+.offering-table input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* 導覽列 */
+.navbar .nav-link { font-size: 0.88rem; }
+.navbar .nav-link.active { font-weight: 700; }
+
+/* 卡片 */
+.card { border-radius: 10px; }
+.card-header { border-radius: 10px 10px 0 0 !important; padding: 10px 16px; }
+
+/* 頁腳 */
+.footer { font-size: 0.78rem; }
+
+/* 列印樣式 */
+@media print {
+  .navbar, .footer, .btn, .alert-dismissible .btn-close,
+  form[method="post"], a.btn, button { display: none !important; }
+  .card { border: 1px solid #dee2e6 !important; box-shadow: none !important; }
+  body { background: white; }
+  main { padding: 0 !important; }
+}

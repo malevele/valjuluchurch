@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block title %}個人奉獻年報表 {{ year }}年{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-table text-info"></i> 個人奉獻年報表</h4>
+  <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-printer"></i> 列印
+  </button>
+</div>
+
+<!-- 篩選 -->
+<form method="get" class="row g-2 mb-3 no-print">
+  <div class="col-md-2">
+    <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+      {% for y in years %}
+      <option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}年</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <select name="offering_type" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">全部類型</option>
+      {% for ot in offering_types %}
+      <option value="{{ ot }}" {% if ot == offering_type %}selected{% endif %}>{{ ot }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <select name="unit_id" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">全部單位</option>
+      {% for u in units %}
+      <option value="{{ u.id }}" {% if unit_id|string == u.id|string %}selected{% endif %}>{{ u.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+
+<!-- 報表標題 -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-info text-white text-center">
+    <h5 class="mb-0">台灣基督長老教會瓦酪露教會</h5>
+    <div>
+      {{ year }}年 個人奉獻年報表
+      {% if offering_type %} — {{ offering_type }}{% endif %}
+      {% if unit_id %}（篩選單位）{% endif %}
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm mb-0 offering-report-table">
+        <thead class="table-info">
+          <tr>
+            <th class="text-center" style="min-width:90px">姓名</th>
+            <th class="text-center small text-muted" style="min-width:40px">單位</th>
+            {% for mo in months %}
+            <th class="text-center" style="min-width:65px">{{ mo }}月</th>
+            {% endfor %}
+            <th class="text-center table-warning" style="min-width:80px">年合計</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in members %}
+          {% set row_total = matrix[m.id].values() | sum %}
+          {% if row_total > 0 %}
+          <tr>
+            <td class="fw-semibold">
+              <a href="{{ url_for('member_detail', m_id=m.id, year=year) }}"
+                 class="text-decoration-none">{{ m.name }}</a>
+            </td>
+            <td class="small text-muted text-center">{{ m.unit.name[:4] if m.unit else '—' }}</td>
+            {% for mo in months %}
+            <td class="text-end small
+                {% if matrix[m.id][mo] > 0 %}text-success fw-semibold{% else %}text-muted{% endif %}">
+              {% if matrix[m.id][mo] > 0 %}
+                {{ '{:,.0f}'.format(matrix[m.id][mo]) }}
+              {% else %}—{% endif %}
+            </td>
+            {% endfor %}
+            <td class="text-end fw-bold text-success table-warning">
+              {{ '{:,.0f}'.format(row_total) }}
+            </td>
+          </tr>
+          {% endif %}
+          {% else %}
+          <tr>
+            <td colspan="{{ 2 + months|length + 1 }}" class="text-center text-muted py-4">
+              {{ year }}年尚無個人奉獻記錄
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <!-- 月合計 -->
+        {% if members %}
+        <tfoot class="table-info fw-bold">
+          <tr>
+            <td colspan="2" class="text-center">月合計</td>
+            {% for mo in months %}
+            <td class="text-end">
+              {% if month_totals[mo] > 0 %}
+                {{ '{:,.0f}'.format(month_totals[mo]) }}
+              {% else %}—{% endif %}
+            </td>
+            {% endfor %}
+            <td class="text-end table-warning text-success fs-6">
+              {{ '{:,.0f}'.format(grand_total) }}
+            </td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+  <div class="card-footer d-flex justify-content-between text-muted small">
+    <span>共 {{ members | selectattr('id', 'in', matrix.keys()) | list | length }} 位會友有奉獻記錄</span>
+    <span>總計：NT$ {{ '{:,.0f}'.format(grand_total) }}</span>
+  </div>
+</div>
+{% endblock %}

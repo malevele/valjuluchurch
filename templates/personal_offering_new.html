@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block title %}新增個人奉獻{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-plus-circle"></i> 新增個人奉獻記錄</h5>
+      </div>
+      <form method="post">
+        <div class="card-body">
+          <div class="row g-3">
+            <!-- 單位 -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">所屬單位 <span class="text-danger">*</span></label>
+              <select name="unit_id" class="form-select" required>
+                <option value="">— 請選擇單位 —</option>
+                {% for u in units %}
+                <option value="{{ u.id }}">{{ u.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <!-- 收入科目 -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">收入科目 <span class="text-danger">*</span></label>
+              <select name="account_id" class="form-select" required>
+                <option value="">— 請選擇科目 —</option>
+                {% for a in accounts %}
+                <option value="{{ a.id }}">{{ a.code }} {{ a.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <!-- 會友 -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">會友 <span class="text-danger">*</span></label>
+              <input type="text" id="memberSearch" class="form-control"
+                     placeholder="輸入會友姓名搜尋..."
+                     value="{{ preset_member_name }}" list="memberOptions" required>
+              <datalist id="memberOptions">
+                {% for mb in members %}
+                <option value="{{ mb.name }}" data-id="{{ mb.id }}"></option>
+                {% endfor %}
+              </datalist>
+              <input type="hidden" name="member_id" id="memberId" value="{{ preset_member_id }}">
+              <div class="form-text">請輸入姓名後，從建議名單選擇會友。</div>
+            </div>
+            <!-- 日期 -->
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">日期 <span class="text-danger">*</span></label>
+              <input type="date" name="date" class="form-control" value="{{ today }}" required>
+            </div>
+            <!-- 金額 -->
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">金額 <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text">NT$</span>
+                <input type="number" name="amount" class="form-control" min="1" step="1"
+                       placeholder="0" required>
+              </div>
+            </div>
+            <!-- 收據號碼 -->
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">收據號碼</label>
+              <input type="text" name="receipt_no" class="form-control" placeholder="選填">
+            </div>
+            <!-- 備註 -->
+            <div class="col-12">
+              <label class="form-label fw-semibold">備註</label>
+              <input type="text" name="notes" class="form-control">
+            </div>
+          </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between">
+          <a href="{{ url_for('personal_offering_list', year=default_year) }}"
+             class="btn btn-secondary">取消</a>
+          <div class="d-flex gap-2">
+            <button type="submit" name="_continue" value="1" class="btn btn-outline-success">
+              <i class="bi bi-save"></i> 儲存並繼續新增
+            </button>
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-save"></i> 儲存
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const input = document.getElementById('memberSearch');
+  const hidden = document.getElementById('memberId');
+  const options = Array.from(document.querySelectorAll('#memberOptions option'));
+
+  const syncMemberId = () => {
+    const matched = options.find(o => o.value === input.value.trim());
+    hidden.value = matched ? matched.dataset.id : '';
+  };
+
+  input.addEventListener('change', syncMemberId);
+  input.addEventListener('blur', syncMemberId);
+  input.form?.addEventListener('submit', (e) => {
+    syncMemberId();
+    if (!hidden.value) {
+      e.preventDefault();
+      alert('請先從搜尋結果選擇有效會友。');
+      input.focus();
+    }
+  });
+})();
+</script>
+{% endblock %}

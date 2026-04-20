@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}查帳明細{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header d-flex justify-content-between">
+        <h5 class="mb-0"><i class="bi bi-clipboard-check text-primary"></i> 查帳紀錄明細</h5>
+        <span class="badge {% if ar.status == '完成' %}bg-success{% elif ar.status == '待改善' %}bg-warning text-dark{% else %}bg-secondary{% endif %} fs-6">
+          {{ ar.status }}
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="row mb-3">
+          <div class="col-md-3"><span class="text-muted small">查帳日期</span>
+            <div class="fw-semibold">{{ ar.audit_date.strftime('%Y-%m-%d') }}</div></div>
+          <div class="col-md-5"><span class="text-muted small">查核區間</span>
+            <div class="fw-semibold">{{ ar.period_start.strftime('%Y/%m/%d') }} — {{ ar.period_end.strftime('%Y/%m/%d') }}</div></div>
+          <div class="col-md-2"><span class="text-muted small">類型</span>
+            <div class="fw-semibold">{{ ar.audit_type }}</div></div>
+          <div class="col-md-2"><span class="text-muted small">查帳員</span>
+            <div class="fw-semibold">{{ ar.auditor or '—' }}</div></div>
+        </div>
+
+        <h6 class="fw-bold text-primary mb-2">查核結果</h6>
+        <div class="row g-2 mb-3">
+          {% set items = [
+            (ar.check_cash_match, '現金帳目核對相符'),
+            (ar.check_bank_match, '銀行存款核對相符'),
+            (ar.check_receipts, '憑證合規'),
+            (ar.check_vouchers, '傳票用印完整'),
+            (ar.check_continuity, '帳冊連續性'),
+            (ar.check_dedicated_funds, '專款專用'),
+            (ar.check_salary, '薪資支給表完整'),
+            (ar.check_seal, '帳簿騎縫章'),
+          ] %}
+          {% for passed, label in items %}
+          <div class="col-md-6">
+            <div class="d-flex align-items-center gap-2 py-1 px-2 rounded
+                        {% if passed %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
+              <i class="bi {% if passed %}bi-check-circle-fill text-success{% else %}bi-x-circle-fill text-danger{% endif %}"></i>
+              <span class="small">{{ label }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        {% if ar.findings %}
+        <div class="alert alert-warning">
+          <strong><i class="bi bi-exclamation-triangle"></i> 發現缺失：</strong><br>
+          {{ ar.findings }}
+        </div>
+        {% endif %}
+
+        {% if ar.notes %}
+        <div class="mt-2">
+          <strong>備註：</strong> {{ ar.notes }}
+        </div>
+        {% endif %}
+
+        <!-- 更新狀態 -->
+        <div class="mt-3 pt-3 border-top">
+          <form method="post" action="{{ url_for('audit_update_status', ar_id=ar.id) }}" class="d-flex gap-2">
+            <select name="status" class="form-select form-select-sm" style="width:auto">
+              <option value="待辦" {% if ar.status == '待辦' %}selected{% endif %}>待辦</option>
+              <option value="待改善" {% if ar.status == '待改善' %}selected{% endif %}>待改善</option>
+              <option value="完成" {% if ar.status == '完成' %}selected{% endif %}>完成</option>
+            </select>
+            <button type="submit" class="btn btn-sm btn-outline-primary">更新狀態</button>
+          </form>
+        </div>
+      </div>
+      <div class="card-footer">
+        <a href="{{ url_for('audit_list') }}" class="btn btn-secondary btn-sm">
+          <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

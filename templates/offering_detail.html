@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}奉獻點算明細{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+      <a href="{{ request.referrer or url_for('offering_list') }}"
+         class="btn btn-secondary btn-sm"
+         title="回上頁" aria-label="回上頁">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('offering_edit', oc_id=oc.id) }}" class="btn btn-primary btn-sm">
+          <i class="bi bi-pencil"></i> 編輯
+        </a>
+        <button onclick="window.print()" class="btn btn-success btn-sm">
+          <i class="bi bi-printer"></i> 列印點算表
+        </button>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm" id="printArea">
+      <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <div>
+          <h5 class="mb-0">奉獻點算表</h5>
+          <small>台灣基督長老教會瓦酪露教會 · 統一編號 87878809</small>
+        </div>
+        {% if oc.attachment_no %}
+        <div class="text-end">
+          <div class="small text-white-50">傳票編號</div>
+          <span class="badge bg-warning text-dark fs-6">{{ oc.attachment_no }}</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="card-body">
+
+        <!-- 基本資訊 -->
+        <div class="row mb-4 border-bottom pb-3">
+          <div class="col-3">
+            <div class="text-muted small mb-1">日期</div>
+            <div class="fw-bold fs-6">{{ oc.date.strftime('%Y年%m月%d日') }}</div>
+          </div>
+          <div class="col-3">
+            <div class="text-muted small mb-1">聚會 / 單位</div>
+            <div class="fw-bold fs-6">{{ oc.meeting_type }}</div>
+          </div>
+          <div class="col-3">
+            <div class="text-muted small mb-1">收入科目</div>
+            <div class="fw-semibold fs-6">{{ oc.account.name if oc.account else '—' }}</div>
+          </div>
+          <div class="col-3">
+            <div class="text-muted small mb-1">點算總額</div>
+            <div class="fw-bold fs-4 text-success">NT$ {{ '{:,.0f}'.format(oc.total_cash) }}</div>
+          </div>
+        </div>
+
+        <!-- 點算人員簽章 -->
+        <h6 class="fw-bold mb-3">
+          <i class="bi bi-pen"></i> 點算人員簽章
+          <span class="badge bg-danger ms-1 small">須兩位</span>
+        </h6>
+        <div class="row g-4 mb-3">
+          <div class="col-md-5">
+            <div class="border rounded p-3 text-center" style="min-height:90px">
+              <div class="fw-semibold mb-2 fs-6">{{ oc.counter1 or '&nbsp;' }}</div>
+              <div class="border-top pt-2 text-muted small">點算人一 簽章</div>
+            </div>
+          </div>
+          <div class="col-md-5">
+            <div class="border rounded p-3 text-center {% if not oc.counter2 %}border-danger{% endif %}" style="min-height:90px">
+              <div class="fw-semibold mb-2 fs-6">{{ oc.counter2 or '&nbsp;' }}</div>
+              <div class="border-top pt-2 text-muted small">點算人二 簽章</div>
+              {% if not oc.counter2 %}
+              <span class="badge bg-danger">尚未填寫</span>
+              {% endif %}
+            </div>
+          </div>
+          {% if oc.notes %}
+          <div class="col-md-2 d-flex align-items-center">
+            <div>
+              <div class="text-muted small">備註</div>
+              <div class="small">{{ oc.notes }}</div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="text-muted small mt-2">
+          <i class="bi bi-info-circle"></i>
+          點算須在透明、公開環境下由至少兩位同工共同進行。金額如有更改，請兩位點算人共同簽章確認。
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+@media print {
+  .no-print, nav, footer, .navbar, .alert { display: none !important; }
+  body { background: white !important; }
+  .card { border: none !important; box-shadow: none !important; }
+  #printArea { width: 100%; }
+  .card-header { background-color: #198754 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+<script>
+  // 從現金簿列印按鈕開啟時自動觸發列印
+  if (new URLSearchParams(window.location.search).get('print') === '1') {
+    window.addEventListener('load', () => window.print());
+  }
+</script>
+{% endblock %}

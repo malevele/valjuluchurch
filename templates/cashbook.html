@@ -1,0 +1,659 @@
+{% extends 'base.html' %}
+{% block title %}現金簿{% if unit_id %} — {{ units | selectattr('id','eq',unit_id) | map(attribute='name') | first }}{% endif %}{% endblock %}
+{% block content %}
+
+{% set cur_unit = units | selectattr('id','eq',unit_id) | list | first if unit_id else none %}
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h4 class="mb-0">
+    <i class="bi bi-journal-text text-primary"></i>
+    {% if cur_unit %}{{ cur_unit.name }}{% else %}全部單位{% endif %} 現金簿
+  </h4>
+  <div class="d-flex gap-2 align-items-center">
+    <form class="d-flex gap-2 align-items-center" method="get" id="cbFilterForm">
+      <input type="hidden" name="unit_id" value="{{ unit_id }}">
+      <div class="input-group input-group-sm" style="width:130px">
+        <select name="year" id="yearSelect" class="form-select form-select-sm"
+                onchange="handleYearChange(this)">
+          {% for y in years %}
+          <option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}年</option>
+          {% endfor %}
+          {% if year not in years %}
+          <option value="{{ year }}" selected>{{ year }}年</option>
+          {% endif %}
+          <option value="__custom__">手動輸入…</option>
+        </select>
+      </div>
+      <input type="number" name="_year_custom" id="yearCustom" class="form-control form-control-sm d-none"
+             min="2000" max="2099" value="{{ year }}" placeholder="年份"
+             style="width:80px" onblur="applyCustomYear()">
+      <select name="month" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+        {% for m in months %}<option value="{{ m }}" {% if m==month %}selected{% endif %}>{{ m }}月</option>{% endfor %}
+      </select>
+    </form>
+    <a href="{{ url_for('voucher_income', unit_id=unit_id if unit_id else 0) }}"
+       class="btn btn-success btn-sm">
+      <i class="bi bi-arrow-up-circle"></i> 新增收入傳票
+    </a>
+    <a href="{{ url_for('voucher_expense', unit_id=unit_id if unit_id else 0) }}"
+       class="btn btn-danger btn-sm">
+      <i class="bi bi-arrow-down-circle"></i> 新增支出傳票
+    </a>
+    {% if unit_id %}
+    <a href="{{ url_for('offering_new') }}?unit={{ unit_id }}"
+       class="btn btn-warning btn-sm">
+      <i class="bi bi-cash-stack"></i> 新增點算表
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- 單位標籤列 -->
+<div class="mb-3 border-bottom pb-2">
+  <div class="d-flex gap-1 flex-wrap">
+    {% for u in units %}
+    <a href="{{ url_for('cashbook', year=year, month=month, unit_id=u.id) }}"
+       class="btn btn-sm {% if unit_id == u.id %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+      {{ u.name }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- 月計摘要 -->
+<div class="row g-2 mb-3 no-print">
+  {% if unit_id and txs %}
+  <div class="col-sm-3">
+    <div class="card border-0 bg-secondary-subtle text-center py-2">
+      <div class="small text-muted">上月結存</div>
+      <div class="fw-bold text-secondary fs-6">NT$ {{ '{:,.0f}'.format(prev_balance) }}</div>
+    </div>
+  </div>
+  {% endif %}
+  <div class="col-sm-3">
+    <div class="card border-0 bg-success-subtle text-center py-2">
+      <div class="small text-muted">本月收入</div>
+      <div class="fw-bold text-success fs-6">NT$ {{ '{:,.0f}'.format(monthly_in) }}</div>
+    </div>
+  </div>
+  <div class="col-sm-3">
+    <div class="card border-0 bg-danger-subtle text-center py-2">
+      <div class="small text-muted">本月支出</div>
+      <div class="fw-bold text-danger fs-6">NT$ {{ '{:,.0f}'.format(monthly_out) }}</div>
+    </div>
+  </div>
+  <div class="col-sm-3">
+    <div class="card border-0 bg-primary-subtle text-center py-2">
+      <div class="small text-muted">本月結餘</div>
+      <div class="fw-bold {% if monthly_in - monthly_out >= 0 %}text-primary{% else %}text-warning{% endif %} fs-6">
+        NT$ {{ '{:,.0f}'.format(monthly_in - monthly_out) }}
+      </div>
+    </div>
+  </div>
+  {% if unit_id and txs %}
+  <div class="col-sm-3">
+    <div class="card border-0 bg-warning-subtle text-center py-2">
+      <div class="small text-muted">月底結餘</div>
+      <div class="fw-bold text-warning fs-6">NT$ {{ '{:,.0f}'.format(txs[-1].balance) }}</div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- 現金簿明細表 -->
+<div class="card border-0 shadow-sm">
+  {% if unit_id and cur_unit %}
+  <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-2">
+    <span class="fw-semibold small">
+      <i class="bi bi-journal-bookmark text-primary"></i> {{ cur_unit.name }}
+      — {{ year }}年{{ month }}月份現金簿
+    </span>
+    <div class="d-flex gap-1">
+      <button onclick="batchPrintVouchers()" class="btn btn-xs btn-outline-primary" title="批次列印本月所有傳票">
+        <i class="bi bi-printer-fill"></i> 批次列印傳票
+      </button>
+      <button onclick="window.print()" class="btn btn-xs btn-outline-secondary">
+        <i class="bi bi-printer"></i> 列印現金簿
+      </button>
+    </div>
+  </div>
+  {% endif %}
+  <div class="table-responsive">
+    <table class="table table-hover table-sm mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>日期</th>
+          <th>傳票號</th>
+          <th>會計科目</th>
+          <th>摘要</th>
+          {% if not unit_id %}<th>單位</th>{% endif %}
+          <th class="text-end">收入</th>
+          <th class="text-end">支出</th>
+          {% if unit_id %}<th class="text-end">餘額</th>{% endif %}
+          <th class="text-center" style="width:80px">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if unit_id %}
+        <!-- 上月結存行（只要選定單位就顯示） -->
+        <tr class="table-secondary">
+          <td></td><td></td>
+          <td colspan="2" class="fw-semibold small text-muted">
+            {% if month == 1 %}{{ year - 1 }}年度結存{% else %}{{ month - 1 }}月結存{% endif %}
+          </td>
+          {% if month == 1 %}
+          <td class="text-end text-muted small"></td>
+          <td class="text-end text-muted small"></td>
+          {% else %}
+          <td class="text-end text-success small fw-semibold">{{ '{:,.0f}'.format(prev_ytd_in) }}</td>
+          <td class="text-end text-danger small fw-semibold">{{ '{:,.0f}'.format(prev_ytd_out) }}</td>
+          {% endif %}
+          <td class="text-end fw-bold">{{ '{:,.0f}'.format(prev_balance) }}</td>
+          <td></td>
+        </tr>
+        {% endif %}
+        {% for tx in txs %}
+        <tr>
+          <td class="text-nowrap small">{{ tx.date.strftime('%Y-%m-%d') }}</td>
+          <td class="small text-muted text-nowrap">
+            {% if tx.voucher_no %}
+            <span class="badge {% if tx.voucher_type == 'income' %}bg-success-subtle text-success-emphasis{% else %}bg-danger-subtle text-danger-emphasis{% endif %}">
+              {{ tx.voucher_no }}
+            </span>
+            {% if tx.voucher_no in offering_map %}
+            <a href="{{ url_for('offering_detail', oc_id=offering_map[tx.voucher_no]) }}"
+               class="badge bg-warning text-dark ms-1" title="查看奉獻點算表">
+              <i class="bi bi-cash-stack"></i> 奉獻
+            </a>
+            {% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td class="small">{{ tx.account.name }}</td>
+          <td class="small" style="max-width:180px">{{ tx.description }}</td>
+          {% if not unit_id %}
+          <td class="small text-muted">{{ tx.unit.name if tx.unit else '—' }}</td>
+          {% endif %}
+          <td class="text-end text-success fw-semibold small">
+            {% if tx.amount_in > 0 %}{{ '{:,.0f}'.format(tx.amount_in) }}{% endif %}
+          </td>
+          <td class="text-end text-danger fw-semibold small">
+            {% if tx.amount_out > 0 %}{{ '{:,.0f}'.format(tx.amount_out) }}{% endif %}
+          </td>
+          {% if unit_id %}
+          <td class="text-end fw-bold small">{{ '{:,.0f}'.format(tx.balance) }}</td>
+          {% endif %}
+          <td class="text-center">
+            <button class="btn btn-xs btn-outline-secondary" title="列印傳票"
+              onclick="printVoucher(this)"
+              data-type="{{ tx.voucher_type }}"
+              data-date="{{ tx.date.strftime('%Y-%m-%d') }}"
+              data-voucher="{{ tx.voucher_no or '' }}"
+              data-unit="{{ (tx.unit.name if tx.unit else '') | e }}"
+              data-account="{{ tx.account.name | e }}"
+              data-desc="{{ tx.description | e }}"
+              data-amount-in="{{ tx.amount_in }}"
+              data-amount-out="{{ tx.amount_out }}"
+              data-notes="{{ (tx.notes or '') | e }}">
+              <i class="bi bi-printer"></i>
+            </button>
+            <a href="{{ url_for('cashbook_edit', tx_id=tx.id) }}"
+               class="btn btn-xs btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+            <form method="post" action="{{ url_for('cashbook_delete', tx_id=tx.id) }}"
+                  class="d-inline" onsubmit="return confirm('確定刪除？')">
+              <button class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9" class="text-center text-muted py-4">
+            <i class="bi bi-journal-x fs-3 d-block mb-2"></i>
+            {{ year }}年{{ month }}月
+            {% if cur_unit %}「{{ cur_unit.name }}」{% endif %}尚無記錄
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if txs or unit_id %}
+      <tfoot class="table-light fw-bold">
+        {% if txs %}
+        <!-- 月記：當月收入支出合計 -->
+        <tr>
+          <td colspan="{% if unit_id %}4{% else %}5{% endif %}" class="text-end small">月　記：</td>
+          <td class="text-end text-success small">{{ '{:,.0f}'.format(monthly_in) }}</td>
+          <td class="text-end text-danger small">{{ '{:,.0f}'.format(monthly_out) }}</td>
+          {% if unit_id %}
+          <td class="text-end {% if monthly_in - monthly_out >= 0 %}text-success{% else %}text-danger{% endif %} small">
+            {{ '{:,.0f}'.format(monthly_in - monthly_out) }}
+          </td>
+          {% endif %}
+          <td></td>
+        </tr>
+        {% endif %}
+        {% if unit_id %}
+        <!-- 累計：年初至本月累計收入/支出，本月底結餘 -->
+        <tr class="table-primary">
+          <td colspan="4" class="text-end small">累　計：</td>
+          <td class="text-end text-success small fw-bold">{{ '{:,.0f}'.format(ytd_in) }}</td>
+          <td class="text-end text-danger small fw-bold">{{ '{:,.0f}'.format(ytd_out) }}</td>
+          <td class="text-end fw-bold text-primary">
+            {{ '{:,.0f}'.format(prev_balance + monthly_in - monthly_out) }}
+          </td>
+          <td></td>
+        </tr>
+        {% endif %}
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+{% if unit_id %}
+<!-- 奉獻點算記錄 -->
+<div class="card border-0 shadow-sm mt-3 no-print">
+  <div class="card-header bg-success-subtle py-2">
+    <span class="fw-semibold"><i class="bi bi-cash-stack text-success"></i> 本月奉獻點算</span>
+  </div>
+  {% if unit_offerings %}
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr class="small">
+          <th>日期</th><th>聚會名稱</th><th>科目</th>
+          <th>傳票號</th><th class="text-end">奉獻總額</th>
+          <th>點算人</th><th class="text-center">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for oc in unit_offerings %}
+        <tr class="small">
+          <td>{{ oc.date.strftime('%m/%d') }}</td>
+          <td><span class="badge bg-success-subtle text-success-emphasis">{{ oc.meeting_type }}</span></td>
+          <td class="text-muted">{{ oc.account.name if oc.account else '—' }}</td>
+          <td>
+            {% if oc.attachment_no %}
+            <span class="badge bg-success font-monospace">{{ oc.attachment_no }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-end fw-bold text-success">NT$ {{ '{:,.0f}'.format(oc.total_cash) }}</td>
+          <td class="small text-muted">{{ oc.counter1 or '' }}{% if oc.counter2 %} / {{ oc.counter2 }}{% endif %}</td>
+          <td class="text-center">
+            <a href="{{ url_for('offering_detail', oc_id=oc.id) }}" class="btn btn-xs btn-outline-success"><i class="bi bi-eye"></i></a>
+            <a href="{{ url_for('offering_detail', oc_id=oc.id) }}?print=1" target="_blank"
+               class="btn btn-xs btn-outline-secondary" title="列印點算表"><i class="bi bi-printer"></i></a>
+            <a href="{{ url_for('offering_edit', oc_id=oc.id) }}" class="btn btn-xs btn-outline-primary"><i class="bi bi-pencil"></i></a>
+            <form method="post" action="{{ url_for('offering_delete', oc_id=oc.id) }}" class="d-inline"
+                  onsubmit="return confirm('確定刪除？同時刪除對應收入傳票。')">
+              <button class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        <tr class="table-success fw-bold small">
+          <td colspan="4" class="text-end">本月奉獻合計</td>
+          <td class="text-end">NT$ {{ '{:,.0f}'.format(unit_offerings | sum(attribute='total_cash')) }}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="p-3 text-muted small text-center">本月尚無奉獻點算記錄
+    <a href="{{ url_for('offering_new') }}" class="ms-2">新增</a>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if unit_id %}
+<!-- 銀行帳目與現金核對 -->
+<div class="card border-0 shadow-sm mt-3 no-print">
+  <div class="card-header bg-warning-subtle py-2">
+    <span class="fw-semibold"><i class="bi bi-bank"></i> 銀行帳目 ＆ 現金核對 — {{ year }}年{{ month }}月</span>
+  </div>
+
+  {% if bank_summary %}
+  {% for row in bank_summary %}
+  <div class="border-bottom">
+    <div class="px-3 pt-2 pb-1 bg-light d-flex justify-content-between align-items-center">
+      <span class="fw-semibold small">
+        <i class="bi bi-bank2 text-info"></i>
+        {{ row.ba.bank_name }} （末四碼 {{ row.ba.account_no[-4:] }}）
+      </span>
+      <span class="small text-muted">帳戶餘額：<strong class="text-info">NT$ {{ '{:,.0f}'.format(row.ba.current_balance) }}</strong></span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr class="small text-center">
+            <th>日期</th><th>類型</th><th>說明</th>
+            <th class="text-end">存入</th><th class="text-end">提領</th>
+            <th class="text-end">累計餘額</th><th class="text-center" style="width:50px">刪除</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if row.txs %}
+          {% for t in row.txs %}
+          <tr class="small text-center">
+            <td>{{ t.date.strftime('%m/%d') }}</td>
+            <td><span class="badge {% if t.tx_type == '存入' %}bg-success{% else %}bg-danger{% endif %}">{{ t.tx_type }}</span></td>
+            <td class="text-start">{{ t.description or '—' }}</td>
+            <td class="text-end text-success">{% if t.tx_type == '存入' %}{{ '{:,.0f}'.format(t.amount) }}{% endif %}</td>
+            <td class="text-end text-danger">{% if t.tx_type == '提領' %}{{ '{:,.0f}'.format(t.amount) }}{% endif %}</td>
+            <td class="text-end fw-bold">{{ '{:,.0f}'.format(t.balance) }}</td>
+            <td class="text-center">
+              <form method="post" action="{{ url_for('bank_tx_delete', tx_id=t.id) }}" class="d-inline"
+                    onsubmit="return confirm('確定刪除此筆銀行交易？')">
+                <button class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+          <tr class="table-info fw-bold small">
+            <td colspan="3" class="text-end">本月合計</td>
+            <td class="text-end text-success">{% if row.deposit > 0 %}{{ '{:,.0f}'.format(row.deposit) }}{% else %}—{% endif %}</td>
+            <td class="text-end text-danger">{% if row.withdrawal > 0 %}{{ '{:,.0f}'.format(row.withdrawal) }}{% else %}—{% endif %}</td>
+            <td class="text-end">{{ '{:,.0f}'.format(row.ba.current_balance) }}</td>
+            <td></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="text-center text-muted py-2 small">本月無交易記錄</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+    <!-- 新增銀行交易表單 -->
+    <form method="post" action="{{ url_for('bank_tx_add') }}" class="p-2 bg-light border-top">
+      <input type="hidden" name="bank_account_id" value="{{ row.ba.id }}">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-2">
+          <input type="date" name="date" class="form-control form-control-sm"
+                 value="{{ '%04d-%02d-01' % (year, month) }}" required>
+        </div>
+        <div class="col-md-2">
+          <select name="tx_type" class="form-select form-select-sm" required>
+            <option value="存入">存入</option>
+            <option value="提領">提領</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <input type="number" name="amount" class="form-control form-control-sm"
+                 min="1" step="1" placeholder="金額" required>
+        </div>
+        <div class="col-md-3">
+          <input type="text" name="description" class="form-control form-control-sm" placeholder="說明（選填）">
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-info btn-sm w-100 text-white">
+            <i class="bi bi-plus-lg"></i> 新增
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+  {% endfor %}
+
+  <!-- 銀行合計 -->
+  {% set bank_total_val = namespace(v=0) %}
+  {% for row in bank_summary %}{% set bank_total_val.v = bank_total_val.v + row.ba.current_balance %}{% endfor %}
+  <div class="px-3 py-2 bg-info-subtle d-flex justify-content-between align-items-center">
+    <span class="fw-semibold small">銀行存款合計</span>
+    <span class="fw-bold text-info">NT$ {{ '{:,.0f}'.format(bank_total_val.v) }}</span>
+  </div>
+  {% else %}
+  {% set bank_total_val = namespace(v=0) %}
+  <div class="p-3 text-muted small">尚無銀行帳戶資料，請至「銀行帳戶」設定新增。</div>
+  {% endif %}
+
+  <!-- 手上現金與加總 -->
+  <div class="card-footer p-0">
+    {% set bank_tv = namespace(v=0) %}
+    {% for row in bank_summary %}{% set bank_tv.v = bank_tv.v + row.ba.current_balance %}{% endfor %}
+    {% set cash_amt = recon.cash_amt if recon else 0 %}
+    {% set grand_total = bank_tv.v + cash_amt %}
+    <table class="table table-bordered table-sm mb-0">
+      <tbody>
+        <tr class="small">
+          <td class="ps-3 fw-semibold"><i class="bi bi-bank text-info"></i> 銀行登記總額</td>
+          <td class="text-end fw-bold text-info">NT$ {{ '{:,.0f}'.format(bank_tv.v) }}</td>
+        </tr>
+        <tr class="small">
+          <td class="ps-3 fw-semibold"><i class="bi bi-cash text-success"></i> 庫存現金總額</td>
+          <td class="text-end fw-bold text-success">
+            {% if recon %}NT$ {{ '{:,.0f}'.format(cash_amt) }}
+            {% else %}<span class="text-muted">未填寫</span>{% endif %}
+          </td>
+        </tr>
+        <tr class="fw-bold table-warning">
+          <td class="ps-3"><i class="bi bi-calculator"></i> 合計（銀行 ＋ 現金）</td>
+          <td class="text-end fs-6">NT$ {{ '{:,.0f}'.format(grand_total) }}</td>
+        </tr>
+        {% if unit_id %}
+        {% set recon_diff = unit_closing_bal - grand_total %}
+        <tr class="fw-bold {% if recon_diff == 0 %}table-success{% else %}table-danger{% endif %}">
+          <td class="ps-3">
+            <i class="bi {% if recon_diff == 0 %}bi-check-circle-fill{% else %}bi-exclamation-triangle-fill{% endif %}"></i>
+            現金簿帳面與存款核對
+          </td>
+          <td class="text-end fs-6">
+            {% if recon_diff == 0 %}
+              相符
+            {% elif recon_diff > 0 %}
+              帳面多 NT$ {{ '{:,.0f}'.format(recon_diff) }}
+            {% else %}
+              帳面少 NT$ {{ '{:,.0f}'.format(-recon_diff) }}
+            {% endif %}
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+    <form method="post" action="{{ url_for('reports_reconcile') }}" class="p-3 border-top">
+      <input type="hidden" name="year"    value="{{ year }}">
+      <input type="hidden" name="month"   value="{{ month }}">
+      <input type="hidden" name="unit_id" value="{{ unit_id }}">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">庫存現金總額 NT$</label>
+          <input type="number" name="cash_amt" class="form-control form-control-sm"
+                 min="0" step="1" value="{{ recon.cash_amt if recon else 0 }}">
+        </div>
+        <div class="col-md-5">
+          <label class="form-label small fw-semibold">差異說明（若有差異請填寫）</label>
+          <input type="text" name="reason" class="form-control form-control-sm"
+                 placeholder="例：尚未入帳支票 NT$3,000"
+                 value="{{ recon.reason if recon else '' }}">
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-warning btn-sm w-100">
+            <i class="bi bi-save"></i> 儲存核對
+          </button>
+        </div>
+        {% if recon %}
+        <div class="col-md-2 text-muted small">
+          上次核對：{{ recon.confirmed_at.strftime('%m/%d %H:%M') }}
+        </div>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+@media print {
+  .no-print { display: none !important; }
+  nav, footer, .navbar, .no-print { display: none !important; }
+  body { background: white !important; }
+  .card { border: none !important; box-shadow: none !important; }
+}
+</style>
+<script>
+function voucherHTML(d, isLast) {
+  const isIncome = d.type === 'income';
+  const title    = isIncome ? '收　入　傳　票' : '支　出　傳　票';
+  const color    = isIncome ? '#1a7c3e' : '#b02020';
+  const lastSig  = isIncome ? '收款人' : '付款人';
+  const amount   = isIncome ? parseFloat(d.amountIn)||0 : parseFloat(d.amountOut)||0;
+  const pageBreak = isLast ? '' : 'page-break-after:always;';
+  return `<div style="${pageBreak}padding:30px;">
+    <h2 style="text-align:center;font-size:14pt;margin:0 0 4px;">台灣基督長老教會瓦酪露教會</h2>
+    <h1 style="text-align:center;font-size:20pt;letter-spacing:6px;margin:0 0 16px;">${title}</h1>
+    <table style="width:100%;border-collapse:collapse;font-size:12pt;">
+      <tr>
+        <td style="border:1px solid #000;padding:8px 10px;width:70px;background:#f8f8f8;font-weight:bold;">日　期</td>
+        <td style="border:1px solid #000;padding:8px 10px;">${d.date}</td>
+        <td style="border:1px solid #000;padding:8px 10px;width:70px;background:#f8f8f8;font-weight:bold;">傳票號</td>
+        <td style="border:1px solid #000;padding:8px 10px;"><strong>${d.voucher||'—'}</strong></td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000;padding:8px 10px;background:#f8f8f8;font-weight:bold;">單　位</td>
+        <td style="border:1px solid #000;padding:8px 10px;">${d.unit||'—'}</td>
+        <td style="border:1px solid #000;padding:8px 10px;background:#f8f8f8;font-weight:bold;">科　目</td>
+        <td style="border:1px solid #000;padding:8px 10px;">${d.account}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000;padding:8px 10px;background:#f8f8f8;font-weight:bold;">摘　要</td>
+        <td colspan="3" style="border:1px solid #000;padding:8px 10px;">${d.desc}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000;padding:8px 10px;background:#f8f8f8;font-weight:bold;">金　額</td>
+        <td colspan="3" style="border:1px solid #000;padding:8px 10px;font-size:14pt;font-weight:bold;color:${color};">NT$ ${amount.toLocaleString('zh-TW')}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000;padding:8px 10px;background:#f8f8f8;font-weight:bold;">備　註</td>
+        <td colspan="3" style="border:1px solid #000;padding:8px 10px;">${d.notes||''}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000;padding:55px 6px 6px;text-align:center;">製票者</td>
+        <td style="border:1px solid #000;padding:55px 6px 6px;text-align:center;">審核者</td>
+        <td style="border:1px solid #000;padding:55px 6px 6px;text-align:center;">主　任</td>
+        <td style="border:1px solid #000;padding:55px 6px 6px;text-align:center;">${lastSig}</td>
+      </tr>
+    </table>
+  </div>`;
+}
+
+function batchPrintVouchers() {
+  const btns = Array.from(document.querySelectorAll('button[data-type]'));
+  if (!btns.length) { alert('本月無傳票資料可列印'); return; }
+  const vouchers = btns.map(b => ({
+    type: b.dataset.type, date: b.dataset.date,
+    voucher: b.dataset.voucher, unit: b.dataset.unit,
+    account: b.dataset.account, desc: b.dataset.desc,
+    amountIn: b.dataset.amountIn, amountOut: b.dataset.amountOut,
+    notes: b.dataset.notes
+  }));
+  const body = vouchers.map((v, i) => voucherHTML(v, i === vouchers.length - 1)).join('');
+  const w = window.open('', '_blank', 'width=900,height=700');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>批次列印傳票</title>
+    <style>
+      body { font-family:"Microsoft JhengHei",sans-serif; margin:0; }
+      @media print { @page { margin:10mm; } }
+    </style></head><body>${body}</body></html>`);
+  w.document.close();
+  w.focus();
+  w.print();
+}
+
+function printVoucher(btn) {
+  const isIncome = btn.dataset.type === 'income';
+  const title    = isIncome ? '收　入　傳　票' : '支　出　傳　票';
+  const color    = isIncome ? '#1a7c3e' : '#b02020';
+  const lastSig  = isIncome ? '收款人' : '付款人';
+  const amount   = isIncome
+    ? parseFloat(btn.dataset.amountIn)  || 0
+    : parseFloat(btn.dataset.amountOut) || 0;
+
+  const w = window.open('', '_blank', 'width=820,height=640');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>${btn.dataset.type === 'income' ? '收入' : '支出'}傳票 ${btn.dataset.voucher}</title>
+  <style>
+    body { font-family:"Microsoft JhengHei",sans-serif; padding:30px; }
+    h2 { text-align:center; font-size:14pt; margin:0 0 4px; }
+    h1 { text-align:center; font-size:20pt; letter-spacing:6px; margin:0 0 16px; }
+    table { width:100%; border-collapse:collapse; font-size:12pt; }
+    td { border:1px solid #000; padding:8px 10px; }
+    .label { width:70px; background:#f8f8f8; font-weight:bold; white-space:nowrap; }
+    .amount-cell { font-size:14pt; font-weight:bold; color:${color}; }
+    .sig td { height:60px; text-align:center; font-size:11pt; vertical-align:bottom; padding-bottom:6px; }
+  </style></head><body>
+  <h2>台灣基督長老教會瓦酪露教會</h2>
+  <h1>${title}</h1>
+  <table>
+    <tr>
+      <td class="label">日　期</td><td>${btn.dataset.date}</td>
+      <td class="label">傳票號</td><td><strong>${btn.dataset.voucher || '—'}</strong></td>
+    </tr>
+    <tr>
+      <td class="label">單　位</td><td>${btn.dataset.unit || '—'}</td>
+      <td class="label">科　目</td><td>${btn.dataset.account}</td>
+    </tr>
+    <tr>
+      <td class="label">摘　要</td><td colspan="3">${btn.dataset.desc}</td>
+    </tr>
+    <tr>
+      <td class="label">金　額</td>
+      <td colspan="3" class="amount-cell">NT$ ${amount.toLocaleString('zh-TW')}</td>
+    </tr>
+    <tr>
+      <td class="label">備　註</td><td colspan="3">${btn.dataset.notes || ''}</td>
+    </tr>
+    <tr class="sig">
+      <td>製票者</td><td>審核者</td><td>主　任</td><td>${lastSig}</td>
+    </tr>
+  </table>
+  </body></html>`);
+  w.document.close();
+  w.focus();
+  w.print();
+}
+</script>
+<script>
+function handleYearChange(sel) {
+  if (sel.value === '__custom__') {
+    sel.classList.add('d-none');
+    const inp = document.getElementById('yearCustom');
+    inp.classList.remove('d-none');
+    inp.focus();
+    inp.select();
+  } else {
+    document.getElementById('cbFilterForm').submit();
+  }
+}
+
+function applyCustomYear() {
+  const inp = document.getElementById('yearCustom');
+  const val = parseInt(inp.value);
+  if (val >= 2000 && val <= 2099) {
+    const sel = document.getElementById('yearSelect');
+    let opt = sel.querySelector('option[value="' + val + '"]');
+    if (!opt) {
+      opt = new Option(val + '年', val);
+      sel.insertBefore(opt, sel.querySelector('option[value="__custom__"]'));
+    }
+    sel.value = val;
+    inp.name = '';
+    sel.classList.remove('d-none');
+    inp.classList.add('d-none');
+    document.getElementById('cbFilterForm').submit();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const yearInp = document.getElementById('yearCustom');
+  yearInp.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); applyCustomYear(); }
+    if (e.key === 'Escape') {
+      this.classList.add('d-none');
+      document.getElementById('yearSelect').classList.remove('d-none');
+    }
+  });
+});
+</script>
+{% endblock %}

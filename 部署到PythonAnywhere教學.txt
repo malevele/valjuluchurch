@@ -1,0 +1,95 @@
+════════════════════════════════════════════════════════════
+  瓦酪露教會財務系統 — 部署到 PythonAnywhere
+  目標網址：http://valjuluchurch.pythonanywhere.com
+════════════════════════════════════════════════════════════
+
+【準備時間】約 15-20 分鐘
+【費用】完全免費（PythonAnywhere 免費方案）
+【網址】http://valjuluchurch.pythonanywhere.com
+
+────────────────────────────────────────────────────────────
+步驟一：註冊 PythonAnywhere 帳號
+────────────────────────────────────────────────────────────
+1. 前往 https://www.pythonanywhere.com
+2. 點擊右上角「Pricing & signup」
+3. 選擇「Create a Beginner account（Free）」
+4. Username 填寫：valjuluchurch （重要！決定網址）
+5. Email 填寫教會信箱
+6. 設定密碼 → 完成註冊
+
+────────────────────────────────────────────────────────────
+步驟二：上傳系統檔案
+────────────────────────────────────────────────────────────
+1. 登入後，點上方選單「Files」
+2. 點「Upload a file」→ 上傳 church_finance.zip
+   （先將 church_finance 整個資料夾壓縮成 zip）
+3. 在 Files 頁面下方「Bash console」輸入：
+   cd ~
+   unzip church_finance.zip
+   mv church_finance/* ~/church_finance/ 2>/dev/null || true
+
+   或直接：
+   unzip church_finance.zip -d ~/
+
+────────────────────────────────────────────────────────────
+步驟三：安裝套件
+────────────────────────────────────────────────────────────
+在 Bash console 輸入（每行按 Enter）：
+
+pip3 install --user flask flask-sqlalchemy openpyxl
+
+────────────────────────────────────────────────────────────
+步驟四：設定 Web App
+────────────────────────────────────────────────────────────
+1. 點上方選單「Web」
+2. 點「Add a new web app」→ Next
+3. 選「Flask」→ Next
+4. 選 Python 3.10（或最新版）→ Next
+5. Path 改為：/home/valjuluchurch/church_finance/wsgi.py
+6. 點「Next」完成設定
+
+────────────────────────────────────────────────────────────
+步驟五：設定路徑
+────────────────────────────────────────────────────────────
+在 Web 頁面往下找「Code」區塊：
+- Source code: /home/valjuluchurch/church_finance
+- Working directory: /home/valjuluchurch/church_finance
+- WSGI configuration file: 點擊編輯，改成以下內容：
+
+━━━ wsgi 設定檔內容（複製貼上）━━━
+import sys, os
+project = '/home/valjuluchurch/church_finance'
+if project not in sys.path:
+    sys.path.insert(0, project)
+os.chdir(project)
+from app import app as application
+from app import init_db
+with application.app_context():
+    init_db()
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+儲存後點右上角「Reload」
+
+────────────────────────────────────────────────────────────
+步驟六：完成！
+────────────────────────────────────────────────────────────
+網址：http://valjuluchurch.pythonanywhere.com
+就可以從手機、平板、任何電腦開啟！
+
+────────────────────────────────────────────────────────────
+注意事項
+────────────────────────────────────────────────────────────
+• 免費方案每3個月需登入一次延長（系統會發信提醒）
+• 免費方案每天有CPU使用量限制（教會輕量使用完全夠用）
+• 資料庫（church.db）存在伺服器，不會因重啟消失
+• 如果需要 https://，可升級付費方案（每月約 NT$150）
+
+────────────────────────────────────────────────────────────
+備用方案：ngrok 即時分享（不需部署）
+────────────────────────────────────────────────────────────
+1. 前往 https://ngrok.com 免費註冊
+2. 取得 Your Authtoken
+3. 執行：ngrok config add-authtoken 您的token
+4. 雙擊 run_ngrok.bat
+5. 使用顯示的 https://xxxx.ngrok-free.app 網址
+（每次重新執行網址會改變）

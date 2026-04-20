@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+{% block title %}{{ unit.name }} - 單位作業中心{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
+  <h4 class="mb-0">
+    <i class="bi bi-house-door text-primary"></i>
+    {{ unit.name }} - 單位作業中心
+  </h4>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('cashbook', unit_id=unit.id, year=year, month=month) }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-journal-text"></i> 現金簿
+    </a>
+    <a href="{{ url_for('reports', unit_id=unit.id, year=year, month=month) }}" class="btn btn-outline-info btn-sm">
+      <i class="bi bi-bar-chart"></i> 月報表
+    </a>
+    <a href="{{ url_for('offering_list', unit_id=unit.id, year=year) }}" class="btn btn-outline-success btn-sm">
+      <i class="bi bi-gift"></i> 奉獻記錄
+    </a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4 no-print">
+  <div class="col-sm-6 col-xl-2">
+    <a href="{{ url_for('voucher_income', unit_id=unit.id) }}" class="card border-0 shadow-sm quick-link text-decoration-none h-100">
+      <div class="card-body">
+        <div class="small text-muted mb-1">{{ unit.name }}</div>
+        <div class="fw-semibold text-success mb-2"><i class="bi bi-arrow-up-circle"></i> 收入傳票</div>
+        <div class="text-muted small">直接帶入此單位新增收入</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-sm-6 col-xl-2">
+    <a href="{{ url_for('voucher_expense', unit_id=unit.id) }}" class="card border-0 shadow-sm quick-link text-decoration-none h-100">
+      <div class="card-body">
+        <div class="small text-muted mb-1">{{ unit.name }}</div>
+        <div class="fw-semibold text-danger mb-2"><i class="bi bi-arrow-down-circle"></i> 支出傳票</div>
+        <div class="text-muted small">直接帶入此單位新增支出</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-sm-6 col-xl-2">
+    <a href="{{ url_for('offering_new', unit=unit.id) }}" class="card border-0 shadow-sm quick-link text-decoration-none h-100">
+      <div class="card-body">
+        <div class="small text-muted mb-1">{{ unit.name }}</div>
+        <div class="fw-semibold text-warning mb-2"><i class="bi bi-cash-coin"></i> 奉獻點算表</div>
+        <div class="text-muted small">新增此單位奉獻點算資料</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-sm-6 col-xl-2">
+    <a href="{{ url_for('cashbook', unit_id=unit.id, year=year, month=month) }}" class="card border-0 shadow-sm quick-link text-decoration-none h-100">
+      <div class="card-body">
+        <div class="small text-muted mb-1">{{ year }}年{{ month }}月</div>
+        <div class="fw-semibold text-primary mb-2"><i class="bi bi-journal-bookmark"></i> 單位現金簿</div>
+        <div class="text-muted small">查看並編輯此單位當月記錄</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-sm-6 col-xl-2">
+    <a href="{{ url_for('reports', unit_id=unit.id, year=year, month=month) }}" class="card border-0 shadow-sm quick-link text-decoration-none h-100">
+      <div class="card-body">
+        <div class="small text-muted mb-1">{{ year }}年{{ month }}月</div>
+        <div class="fw-semibold text-info mb-2"><i class="bi bi-file-earmark-bar-graph"></i> 單位月報表</div>
+        <div class="text-muted small">只看此單位月報表資料</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-sm-6 col-xl-2">
+    <a href="{{ url_for('accounting_check_new', unit_id=unit.id, year=year) }}" class="card border-0 shadow-sm quick-link text-decoration-none h-100">
+      <div class="card-body">
+        <div class="small text-muted mb-1">{{ unit.name }}</div>
+        <div class="fw-semibold text-secondary mb-2"><i class="bi bi-clipboard2-check"></i> 單位查帳表</div>
+        <div class="text-muted small">建立此單位檢核與查帳表</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- 統計卡片 -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm stat-card income">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="stat-label">{{ year }}年 總收入</div>
+            <div class="stat-value text-success">NT$ {{ '{:,.0f}'.format(yearly_income) }}</div>
+            <div class="text-muted small mt-1">本月：NT$ {{ '{:,.0f}'.format(monthly_income) }}</div>
+          </div>
+          <div class="stat-icon bg-success-subtle text-success">
+            <i class="bi bi-arrow-up-circle-fill fs-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm stat-card expense">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="stat-label">{{ year }}年 總支出</div>
+            <div class="stat-value text-danger">NT$ {{ '{:,.0f}'.format(yearly_expense) }}</div>
+            <div class="text-muted small mt-1">本月：NT$ {{ '{:,.0f}'.format(monthly_expense) }}</div>
+          </div>
+          <div class="stat-icon bg-danger-subtle text-danger">
+            <i class="bi bi-arrow-down-circle-fill fs-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm stat-card balance">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="stat-label">帳面餘額</div>
+            <div class="stat-value text-primary">NT$ {{ '{:,.0f}'.format(current_balance) }}</div>
+            <div class="text-muted small mt-1">最新結餘</div>
+          </div>
+          <div class="stat-icon bg-primary-subtle text-primary">
+            <i class="bi bi-cash-stack fs-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card border-0 shadow-sm stat-card bank">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="stat-label">銀行存款</div>
+            <div class="stat-value text-info">NT$ {{ '{:,.0f}'.format(bank_total) }}</div>
+            <div class="text-muted small mt-1">{{ bank_accounts|length }} 個帳戶</div>
+          </div>
+          <div class="stat-icon bg-info-subtle text-info">
+            <i class="bi bi-bank fs-2"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- 最近交易 -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-light">
+        <h6 class="mb-0">
+          <i class="bi bi-clock-history text-primary"></i>
+          最近交易記錄
+        </h6>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>日期</th>
+                <th>傳票號</th>
+                <th>科目</th>
+                <th>摘要</th>
+                <th class="text-end">收入</th>
+                <th class="text-end">支出</th>
+                <th class="text-end">餘額</th>
+                <th class="text-center no-print">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for tx in recent_txs %}
+              <tr>
+                <td>{{ tx.date.strftime('%m/%d') }}</td>
+                <td>
+                  <code class="small">{{ tx.voucher_no or '-' }}</code>
+                </td>
+                <td>{{ tx.account.name if tx.account else '-' }}</td>
+                <td>{{ tx.description or '-' }}</td>
+                <td class="text-end text-success">
+                  {% if tx.amount_in > 0 %}NT$ {{ '{:,.0f}'.format(tx.amount_in) }}{% endif %}
+                </td>
+                <td class="text-end text-danger">
+                  {% if tx.amount_out > 0 %}NT$ {{ '{:,.0f}'.format(tx.amount_out) }}{% endif %}
+                </td>
+                <td class="text-end fw-bold">NT$ {{ '{:,.0f}'.format(tx.balance) }}</td>
+                <td class="text-center no-print">
+                  <a href="{{ url_for('cashbook_edit', tx_id=tx.id) }}" class="btn btn-outline-secondary btn-sm py-0 px-2">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if not recent_txs %}
+        <div class="text-center py-4 text-muted">
+          <i class="bi bi-inbox fs-1"></i>
+          <p class="mt-2">尚無交易記錄</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-footer text-center no-print">
+        <a href="{{ url_for('cashbook', unit_id=unit.id) }}" class="btn btn-outline-primary btn-sm">
+          查看全部交易 <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 側邊欄 -->
+  <div class="col-lg-4">
+    <!-- 收入科目統計 -->
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-light">
+        <h6 class="mb-0">
+          <i class="bi bi-graph-up text-success"></i>
+          本月收入統計
+        </h6>
+      </div>
+      <div class="card-body">
+        {% for item in top_income %}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="small">{{ item[0] }}</span>
+          <span class="badge bg-success">NT$ {{ '{:,.0f}'.format(item[1]) }}</span>
+        </div>
+        {% endfor %}
+        {% if not top_income %}
+        <p class="text-muted small mb-0">本月尚無收入記錄</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- 最近奉獻 -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="mb-0">
+            <i class="bi bi-gift text-warning"></i>
+            最近奉獻記錄
+          </h6>
+          <a href="{{ url_for('offering_new', unit=unit.id) }}" class="btn btn-outline-warning btn-sm no-print">
+            <i class="bi bi-plus-circle"></i>
+          </a>
+        </div>
+      </div>
+      <div class="card-body">
+        {% for offering in recent_offerings %}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <div class="small fw-bold">{{ offering.date.strftime('%m/%d') }}</div>
+            <div class="text-muted small">{{ offering.meeting_type or '主日' }}</div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-warning text-dark">NT$ {{ '{:,.0f}'.format(offering.total_cash) }}</span>
+            <a href="{{ url_for('offering_edit', oc_id=offering.id) }}" class="btn btn-outline-secondary btn-sm py-0 px-2 no-print">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+        {% if not recent_offerings %}
+        <p class="text-muted small mb-0">尚無奉獻記錄</p>
+        {% endif %}
+      </div>
+      <div class="card-footer text-center no-print">
+        <a href="{{ url_for('offering_list', unit_id=unit.id) }}" class="btn btn-outline-success btn-sm">
+          查看全部奉獻 <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.stat-card {
+  transition: transform 0.2s ease;
+}
+.quick-link {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  color: inherit;
+}
+.quick-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 .5rem 1rem rgba(0,0,0,.12) !important;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+.stat-icon {
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stat-label {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-bottom: 0.25rem;
+}
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+</style>
+
+{% endblock %}

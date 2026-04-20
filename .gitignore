@@ -1,0 +1,29 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# Local database and runtime data
+church.db
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Deployment artifacts
+church_finance_deploy*.zip
+church_finance_redeploy*.zip
+church_finance_safe_deploy*.zip
+_deploy_unpack/
+
+# Logs / temp
+*.log
+*.tmp
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/

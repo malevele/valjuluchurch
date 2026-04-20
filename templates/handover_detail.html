@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}出納交接明細{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header d-flex justify-content-between">
+        <h5 class="mb-0"><i class="bi bi-arrow-left-right"></i> 出納交接確認表</h5>
+        <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-printer"></i> 列印
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="text-center mb-3">
+          <h6 class="fw-bold">台灣基督長老教會瓦酪露教會</h6>
+          <div class="text-muted">出納交接確認表</div>
+          <div class="fw-semibold">交接日期：{{ h.handover_date.strftime('%Y年%m月%d日') }}</div>
+        </div>
+
+        <table class="table table-bordered">
+          <tr><th class="bg-light" style="width:35%">現金金額</th>
+              <td class="text-end fw-bold">NT$ {{ '{:,.0f}'.format(h.cash_amount) }}</td></tr>
+          <tr><th class="bg-light">存款金額</th>
+              <td class="text-end fw-bold">NT$ {{ '{:,.0f}'.format(h.bank_amount) }}</td></tr>
+          <tr class="table-primary"><th class="bg-light">合計金額</th>
+              <td class="text-end fw-bold text-primary fs-5">NT$ {{ '{:,.0f}'.format(h.total_amount) }}</td></tr>
+        </table>
+
+        {% if h.bank_details %}
+        <div class="mb-3">
+          <strong>存款明細：</strong>
+          <pre class="small bg-light p-2 rounded">{{ h.bank_details }}</pre>
+        </div>
+        {% endif %}
+
+        {% if h.audit_result %}
+        <div class="alert alert-success py-2">
+          <strong>查帳結果：</strong> {{ h.audit_result }}
+        </div>
+        {% endif %}
+
+        <div class="row mt-3 text-center">
+          <div class="col-3">
+            <div class="border-bottom mb-1 pb-3"></div>
+            <small class="text-muted">原任出納</small>
+            <div class="fw-semibold">{{ h.old_cashier or '—' }}</div>
+          </div>
+          <div class="col-3">
+            <div class="border-bottom mb-1 pb-3"></div>
+            <small class="text-muted">新任出納</small>
+            <div class="fw-semibold">{{ h.new_cashier or '—' }}</div>
+          </div>
+          <div class="col-3">
+            <div class="border-bottom mb-1 pb-3"></div>
+            <small class="text-muted">會計</small>
+            <div class="fw-semibold">{{ h.accountant or '—' }}</div>
+          </div>
+          <div class="col-3">
+            <div class="border-bottom mb-1 pb-3"></div>
+            <small class="text-muted">顧問</small>
+            <div class="fw-semibold">{{ h.advisor or '—' }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <a href="{{ url_for('handover_list') }}" class="btn btn-secondary btn-sm">
+          <i class="bi bi-arrow-left"></i> 返回列表
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

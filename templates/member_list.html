@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block title %}會友名冊{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-people text-primary"></i> 會友名冊</h4>
+  <a href="{{ url_for('member_new') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-person-plus"></i> 新增會友
+  </a>
+</div>
+
+<!-- 統計卡片 -->
+<div class="row g-2 mb-3">
+  <div class="col-sm-6 col-md-3">
+    <div class="card border-0 bg-primary-subtle text-center py-2">
+      <div class="small text-muted">會友總數</div>
+      <div class="fw-bold text-primary fs-4">{{ total }}</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-md-3">
+    <div class="card border-0 bg-success-subtle text-center py-2">
+      <div class="small text-muted">在籍</div>
+      <div class="fw-bold text-success fs-4">{{ active }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- 搜尋篩選 -->
+<form method="get" class="row g-2 mb-3">
+  <div class="col-md-4">
+    <div class="input-group">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input type="text" name="q" class="form-control" placeholder="搜尋姓名…" value="{{ q }}">
+    </div>
+  </div>
+  <div class="col-md-3">
+    <select name="status" class="form-select">
+      <option value="">全部狀態</option>
+      {% for s in statuses %}
+      <option value="{{ s }}" {% if s == status %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <select name="unit_id" class="form-select">
+      <option value="">全部單位</option>
+      {% for u in units %}
+      <option value="{{ u.id }}" {% if unit_id|string == u.id|string %}selected{% endif %}>{{ u.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-outline-primary w-100">篩選</button>
+  </div>
+</form>
+
+<!-- 會友列表 -->
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>#</th><th>姓名</th><th>性別</th><th>所屬單位</th>
+          <th>聯絡電話</th><th>入會日期</th><th>狀態</th>
+          <th class="text-center">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in members %}
+        <tr>
+          <td class="text-muted small">{{ loop.index }}</td>
+          <td>
+            <a href="{{ url_for('member_detail', m_id=m.id) }}" class="fw-semibold text-decoration-none">
+              {{ m.name }}
+            </a>
+          </td>
+          <td>
+            {% if m.gender == '男' %}
+            <span class="badge bg-primary-subtle text-primary-emphasis">男</span>
+            {% elif m.gender == '女' %}
+            <span class="badge bg-danger-subtle text-danger-emphasis">女</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="small">{{ m.unit.name if m.unit else '—' }}</td>
+          <td class="small">{{ m.phone or '—' }}</td>
+          <td class="small text-muted">{{ m.join_date.strftime('%Y-%m-%d') if m.join_date else '—' }}</td>
+          <td>
+            {% if m.status == '在籍' %}
+            <span class="badge bg-success">在籍</span>
+            {% elif m.status == '人在籍不在' or m.status == '請假' %}
+            <span class="badge bg-warning text-dark">人在籍不在</span>
+            {% elif m.status == '人不在籍在' %}
+            <span class="badge bg-info text-dark">人不在籍在</span>
+            {% elif m.status == '轉出' %}
+            <span class="badge bg-secondary">轉出</span>
+            {% else %}
+            <span class="badge bg-dark">安息</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            <a href="{{ url_for('member_detail', m_id=m.id) }}"
+               class="btn btn-xs btn-outline-primary" title="查看">
+              <i class="bi bi-eye"></i>
+            </a>
+            <a href="{{ url_for('member_edit', m_id=m.id) }}"
+               class="btn btn-xs btn-outline-secondary" title="編輯">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form method="post" action="{{ url_for('member_delete', m_id=m.id) }}" class="d-inline"
+                  onsubmit="return confirm('確定刪除「{{ m.name }}」？')">
+              <button class="btn btn-xs btn-outline-danger" title="刪除此會友" aria-label="刪除此會友">
+                <i class="bi bi-person-x"></i> 刪除
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-4">
+            <i class="bi bi-people fs-3 d-block mb-2"></i>
+            {% if q %}搜尋「{{ q }}」無結果{% else %}尚無會友資料{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if members %}
+  <div class="card-footer text-muted small text-end">共 {{ members|length }} 位</div>
+  {% endif %}
+</div>
+{% endblock %}

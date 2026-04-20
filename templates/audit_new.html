@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}新增查帳記錄{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-clipboard-check text-primary"></i> 查帳記錄</h5>
+      </div>
+      <form method="post">
+        <div class="card-body">
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">查帳日期 *</label>
+              <input type="date" name="audit_date" class="form-control" value="{{ today }}" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">查核期間（起）*</label>
+              <input type="date" name="period_start" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">查核期間（迄）*</label>
+              <input type="date" name="period_end" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">查帳員</label>
+              <input type="text" name="auditor" class="form-control" placeholder="查帳員姓名">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">查帳類型</label>
+              <select name="audit_type" class="form-select">
+                <option value="月查">月查</option>
+                <option value="半年查">半年查</option>
+                <option value="年查">年查</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 查核清單 -->
+          <h6 class="fw-bold text-primary mb-3">
+            <i class="bi bi-list-check"></i> 查核清單
+          </h6>
+          <div class="row g-2 mb-4">
+            {% set checks = [
+              ('check_cash_match', '現金帳目核對相符（帳面結餘 = 實際盤點）'),
+              ('check_bank_match', '銀行存款核對相符（每月底存簿餘額 = 帳載金額）'),
+              ('check_receipts', '憑證合規（統編87878809、無立可白塗改）'),
+              ('check_vouchers', '傳票用印完整（製票、覆核、財務負責人）'),
+              ('check_continuity', '帳冊連續性（本月上月結存 = 上月月底結餘）'),
+              ('check_dedicated_funds', '專款專用（建築基金、宣教專案無挪用）'),
+              ('check_salary', '薪資支給表編製完整（傳教師謝禮、職工薪資）'),
+              ('check_seal', '帳簿騎縫章蓋妥（手寫帳簿免）'),
+            ] %}
+            {% for name, label in checks %}
+            <div class="col-md-6">
+              <div class="form-check form-check-inline border rounded p-2 w-100">
+                <input class="form-check-input" type="checkbox" name="{{ name }}" id="{{ name }}" value="1">
+                <label class="form-check-label small" for="{{ name }}">
+                  <i class="bi bi-check-circle text-muted"></i> {{ label }}
+                </label>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold">發現缺失</label>
+              <textarea name="findings" class="form-control" rows="3"
+                        placeholder="記錄查帳發現的缺失或異常（若無則填「無」）"></textarea>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">狀態</label>
+              <select name="status" class="form-select">
+                <option value="待辦">待辦</option>
+                <option value="待改善">待改善</option>
+                <option value="完成">完成</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">備註</label>
+              <textarea name="notes" class="form-control" rows="2"></textarea>
+            </div>
+          </div>
+
+          <div class="alert alert-warning mt-3 small">
+            <i class="bi bi-shield-exclamation"></i>
+            <strong>保密原則：</strong>查帳員接觸之信徒奉獻明細與職工薪資資料，嚴禁對外洩漏。
+            若發現重大資金短絀或不明支出，應立即向小會及監事會報告。
+          </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between">
+          <a href="{{ url_for('audit_list') }}" class="btn btn-secondary">取消</a>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save"></i> 儲存查帳記錄
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}編輯會友 — {{ m.name }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-pencil text-warning"></i> 編輯會友資料 — {{ m.name }}</h5>
+      </div>
+      <form method="post">
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">姓名 *</label>
+              <input type="text" name="name" class="form-control" value="{{ m.name }}" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">性別</label>
+              <select name="gender" class="form-select">
+                <option value="">—</option>
+                <option value="男" {% if m.gender == '男' %}selected{% endif %}>男</option>
+                <option value="女" {% if m.gender == '女' %}selected{% endif %}>女</option>
+              </select>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label fw-semibold">出生日期</label>
+              <input type="date" name="birth_date" class="form-control"
+                     value="{{ m.birth_date.strftime('%Y-%m-%d') if m.birth_date else '' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">聯絡電話</label>
+              <input type="text" name="phone" class="form-control" value="{{ m.phone or '' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">電子信箱</label>
+              <input type="email" name="email" class="form-control" value="{{ m.email or '' }}">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">戶籍/住址</label>
+              <input type="text" name="address" class="form-control" value="{{ m.address or '' }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">入會日期</label>
+              <input type="date" name="join_date" class="form-control"
+                     value="{{ m.join_date.strftime('%Y-%m-%d') if m.join_date else '' }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">受洗日期</label>
+              <input type="date" name="baptism_date" class="form-control"
+                     value="{{ m.baptism_date.strftime('%Y-%m-%d') if m.baptism_date else '' }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">狀態</label>
+              <select name="status" class="form-select">
+                {% for s in ['在籍','人在籍不在','人不在籍在','轉出','安息'] %}
+                <option value="{{ s }}" {% if m.status == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">備註</label>
+              <textarea name="notes" class="form-control" rows="2">{{ m.notes or '' }}</textarea>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center gap-2 flex-wrap">
+          <div class="d-flex gap-2">
+            <a href="{{ url_for('member_detail', m_id=m.id) }}" class="btn btn-secondary">取消</a>
+            <a href="{{ url_for('member_new') }}" class="btn btn-primary">
+              <i class="bi bi-person-plus"></i> 新增會友
+            </a>
+            <form method="post" action="{{ url_for('member_delete', m_id=m.id) }}" class="d-inline"
+                  onsubmit="return confirm('確定刪除「{{ m.name }}」？')">
+              <button type="submit" class="btn btn-outline-danger">
+                <i class="bi bi-person-x"></i> 刪除此會友
+              </button>
+            </form>
+          </div>
+          <button type="submit" class="btn btn-warning">
+            <i class="bi bi-save"></i> 儲存變更
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
