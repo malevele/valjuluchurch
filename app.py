@@ -341,6 +341,19 @@ def unit_dashboard(unit_id):
     )
 
 
+@app.route('/unit-center')
+def unit_center():
+    """單位作業中心入口（依類別分組）"""
+    units = Unit.query.filter_by(is_active=True).order_by(Unit.sort_order, Unit.id).all()
+
+    grouped_units = {}
+    for u in units:
+        group_name = (u.type or '其他').strip() or '其他'
+        grouped_units.setdefault(group_name, []).append(u)
+
+    return render_template('unit_center.html', grouped_units=grouped_units)
+
+
 @app.route('/')
 @app.route('/dashboard')
 def dashboard():
@@ -735,6 +748,11 @@ def cashbook_edit(tx_id):
             tx.balance = prev_bal + tx.amount_in - tx.amount_out
             db.session.commit()
             flash('已更新記錄', 'success')
+            
+            # 获取 from 参数并用于重定向
+            from_url = request.form.get('from', request.args.get('from', ''))
+            if from_url:
+                return redirect(from_url)
             return redirect(url_for('cashbook', year=tx.date.year, month=tx.date.month, unit_id=tx.unit_id or 0))
         except Exception as e:
             db.session.rollback()
@@ -1091,6 +1109,11 @@ def offering_edit(oc_id):
 
             db.session.commit()
             flash('奉獻點算表及對應收入傳票已更新', 'success')
+            
+            # 获取 from 参数并用于重定向
+            from_url = request.form.get('from', request.args.get('from', ''))
+            if from_url:
+                return redirect(from_url)
             return redirect(url_for('offering_detail', oc_id=oc.id))
         except Exception as e:
             db.session.rollback()

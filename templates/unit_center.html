@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}單位作業中心{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-house-door text-primary"></i> 單位作業中心</h4>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> 返回財務總表
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-light">
+    <h6 class="mb-0 text-muted">請先選擇類別，再進入單位</h6>
+  </div>
+  <div class="card-body">
+    <div class="row g-2 mb-3">
+      <div class="col-12 col-md-6">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" id="unitSearch" class="form-control" placeholder="搜尋類別或單位名稱...">
+          <button type="button" class="btn btn-outline-secondary" id="clearSearch">清除</button>
+        </div>
+      </div>
+      <div class="col-12 col-md-6 d-flex align-items-center">
+        <small class="text-muted" id="searchResultHint"></small>
+      </div>
+    </div>
+    {% if grouped_units %}
+    <div class="row g-3" id="unitGroupContainer">
+      {% for type_name, units in grouped_units.items() %}
+      <div class="col-12 col-lg-6 unit-group" data-type="{{ (type_name or '')|lower }}">
+        <div class="border rounded h-100 p-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h6 class="mb-0 fw-semibold text-primary">
+              <i class="bi bi-bookmark-star"></i> {{ type_name }}
+            </h6>
+            <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ units|length }} 個單位</span>
+          </div>
+          <div class="d-flex flex-wrap gap-2 mt-2">
+            {% for u in units %}
+            <a href="{{ url_for('unit_dashboard', unit_id=u.id) }}" class="btn btn-sm btn-outline-primary unit-link" data-unit-name="{{ (u.name or '')|lower }}">
+              <i class="bi bi-house"></i> {{ u.name }}
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="text-center text-muted py-4 d-none" id="noSearchResult">
+      <i class="bi bi-search fs-3 d-block mb-2"></i>
+      找不到符合條件的類別或單位
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-4">
+      <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+      尚無可用單位
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const searchInput = document.getElementById('unitSearch');
+  const clearBtn = document.getElementById('clearSearch');
+  const groups = Array.from(document.querySelectorAll('.unit-group'));
+  const noResult = document.getElementById('noSearchResult');
+  const hint = document.getElementById('searchResultHint');
+
+  if (!searchInput || !groups.length) return;
+
+  function applyFilter() {
+    const keyword = (searchInput.value || '').trim().toLowerCase();
+    let visibleGroupCount = 0;
+    let visibleUnitCount = 0;
+
+    groups.forEach((group) => {
+      const typeName = group.dataset.type || '';
+      const unitLinks = Array.from(group.querySelectorAll('.unit-link'));
+
+      let groupHasVisibleUnit = false;
+      unitLinks.forEach((link) => {
+        const unitName = link.dataset.unitName || '';
+        const match = !keyword || typeName.includes(keyword) || unitName.includes(keyword);
+        link.classList.toggle('d-none', !match);
+        if (match) {
+          groupHasVisibleUnit = true;
+          visibleUnitCount += 1;
+        }
+      });
+
+      group.classList.toggle('d-none', !groupHasVisibleUnit);
+      if (groupHasVisibleUnit) visibleGroupCount += 1;
+    });
+
+    if (keyword) {
+      hint.textContent = `共找到 ${visibleGroupCount} 個類別、${visibleUnitCount} 個單位`;
+    } else {
+      hint.textContent = '';
+    }
+
+    if (noResult) {
+      noResult.classList.toggle('d-none', visibleUnitCount > 0);
+    }
+  }
+
+  searchInput.addEventListener('input', applyFilter);
+  clearBtn.addEventListener('click', function () {
+    searchInput.value = '';
+    applyFilter();
+    searchInput.focus();
+  });
+});
+</script>
+{% endblock %}

@@ -50,6 +50,9 @@
         <h6 class="mb-0 text-muted">傳票號：{{ tx.voucher_no or '—' }}</h6>
       </div>
       <form method="post">
+        {% if request.args.get('from') %}
+        <input type="hidden" name="from" value="{{ request.args.get('from') }}">
+        {% endif %}
         <div class="card-body">
           <div class="row g-3">
             <div class="col-md-4">
@@ -145,7 +148,7 @@
         </div>
         {% endif %}
         <div class="card-footer d-flex justify-content-between">
-          <a href="{{ url_for('cashbook', year=tx.date.year, month=tx.date.month, unit_id=tx.unit_id or 0) }}"
+          <a href="{{ request.form.get('from', request.args.get('from', url_for('cashbook', year=tx.date.year, month=tx.date.month, unit_id=tx.unit_id or 0))) }}"
              class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> 返回
           </a>

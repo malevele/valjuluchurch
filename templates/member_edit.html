@@ -8,6 +8,8 @@
         <h5 class="mb-0"><i class="bi bi-pencil text-warning"></i> 編輯會友資料 — {{ m.name }}</h5>
       </div>
       <form method="post">
+        {# 隱藏的返回路徑欄 #}
+        <input type="hidden" name="from" value="{{ request.referrer or url_for('member_detail', m_id=m.id) }}">
         <div class="card-body">
           <div class="row g-3">
             <div class="col-md-4">
@@ -65,14 +67,16 @@
         </div>
         <div class="card-footer d-flex justify-content-between align-items-center gap-2 flex-wrap">
           <div class="d-flex gap-2">
-            <a href="{{ url_for('member_detail', m_id=m.id) }}" class="btn btn-secondary">取消</a>
+            <a href="{{ request.form.get('from', request.referrer or url_for('member_detail', m_id=m.id)) }}" class="btn btn-secondary">
+              <i class="bi bi-arrow-left"></i> 返回
+            </a>
             <a href="{{ url_for('member_new') }}" class="btn btn-primary">
               <i class="bi bi-person-plus"></i> 新增會友
             </a>
             <form method="post" action="{{ url_for('member_delete', m_id=m.id) }}" class="d-inline"
-                  onsubmit="return confirm('確定刪除「{{ m.name }}」？')">
+                  onsubmit="return confirm('⚠️ 確定要刪除此會友嗎？\n姓名：{{ m.name }}\n\n此操作無法復原！')">
               <button type="submit" class="btn btn-outline-danger">
-                <i class="bi bi-person-x"></i> 刪除此會友
+                <i class="bi bi-person-x"></i> 刪除
               </button>
             </form>
           </div>

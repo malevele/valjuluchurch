@@ -221,7 +221,7 @@ function navigateCashbook() {
               data-notes="{{ (tx.notes or '') | e }}">
               <i class="bi bi-printer"></i>
             </button>
-            <a href="{{ url_for('cashbook_edit', tx_id=tx.id) }}"
+            <a href="{{ url_for('cashbook_edit', tx_id=tx.id, _external=True) }}?from={{ request.url | urlencode }}"
                class="btn btn-xs btn-outline-secondary"><i class="bi bi-pencil"></i></a>
             <form method="post" action="{{ url_for('cashbook_delete', tx_id=tx.id) }}"
                   class="d-inline" onsubmit="return confirm('確定刪除？')">

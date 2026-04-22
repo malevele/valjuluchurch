@@ -111,7 +111,7 @@
             <a href="{{ url_for('offering_detail', oc_id=oc.id) }}" class="btn btn-xs btn-outline-success">
               <i class="bi bi-eye"></i>
             </a>
-            <a href="{{ url_for('offering_edit', oc_id=oc.id) }}" class="btn btn-xs btn-outline-primary">
+            <a href="{{ url_for('offering_edit', oc_id=oc.id, _external=True) }}?from={{ request.url | urlencode }}" class="btn btn-xs btn-outline-primary">
               <i class="bi bi-pencil"></i>
             </a>
             <form method="post" action="{{ url_for('offering_delete', oc_id=oc.id) }}" class="d-inline"

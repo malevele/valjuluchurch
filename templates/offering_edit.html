@@ -6,7 +6,7 @@
   <div class="col-lg-7">
 
     <div class="d-flex align-items-center mb-3 gap-2">
-      <a href="{{ url_for('offering_detail', oc_id=oc.id) }}" class="btn btn-sm btn-outline-secondary">
+      <a href="{{ request.form.get('from', request.referrer or url_for('offering_detail', oc_id=oc.id)) }}" class="btn btn-sm btn-outline-secondary" title="返回上一頁">
         <i class="bi bi-arrow-left"></i>
       </a>
       <h5 class="mb-0 text-success"><i class="bi bi-pencil-square"></i> 編輯奉獻點算表</h5>
@@ -24,6 +24,8 @@
       </div>
 
       <form method="post">
+        {# 隱藏的返回路徑欄 #}
+        <input type="hidden" name="from" value="{{ request.referrer or url_for('offering_detail', oc_id=oc.id) }}">
         <div class="card-body">
           <!-- 第一列：日期 | 傳票號 | 單位 -->
           <div class="row g-3 mb-3">
@@ -116,8 +118,8 @@
         </div>
 
         <div class="card-footer d-flex justify-content-between">
-          <a href="{{ url_for('offering_detail', oc_id=oc.id) }}" class="btn btn-outline-secondary">
-            <i class="bi bi-x-circle"></i> 取消
+          <a href="{{ request.form.get('from', request.referrer or url_for('offering_detail', oc_id=oc.id)) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回
           </a>
           <button type="submit" class="btn btn-success">
             <i class="bi bi-save"></i> 儲存變更
